@@ -1,6 +1,6 @@
 # Trackfolio 📊
 
-Personal portfolio tracking application for managing stocks, crypto, real estate, watches, cash, and retirement funds.
+A comprehensive portfolio tracking application for managing stocks, crypto, real estate, watches, cash, and retirement funds.
 
 ## 🌐 Live Demo
 
