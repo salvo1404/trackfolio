@@ -66,9 +66,7 @@ class ShareTrackerTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
                   ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).pushNamed('/portfolio');
-                    },
+                    onPressed: () => _showAddItemDialog(context),
                     icon: const Icon(Icons.add_circle_outline),
                     label: const Text(
                       'Add Your First Asset',
@@ -90,11 +88,30 @@ class ShareTrackerTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'All Assets',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'All Assets',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () => _showAddItemDialog(context),
+                        icon: const Icon(Icons.add_circle_outline),
+                        label: const Text(
+                          'Add',
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
+                        style: ElevatedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   ..._buildGroupedPortfolioItems(context, portfolioService, currencyFormatter),
@@ -271,9 +288,18 @@ class ShareTrackerTab extends StatelessWidget {
         return Icons.watch;
       case 'cash':
         return Icons.attach_money;
+      case 'retirement fund':
+        return Icons.savings_outlined;
       default:
         return Icons.account_balance_wallet;
     }
+  }
+
+  void _showAddItemDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => const _PortfolioItemDialog(),
+    );
   }
 
   void _showEditItemDialog(BuildContext context, PortfolioItem item) {
@@ -297,15 +323,20 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
   final _formKey = GlobalKey<FormState>();
   late String _type;
   late TextEditingController _nameController;
+  late TextEditingController _symbolController;
   late TextEditingController _quantityController;
   late TextEditingController _purchasePriceController;
   late TextEditingController _currentValueController;
+  late DateTime _purchaseDate;
+  double? _suggestedPrice;
+  bool _isLoadingPrice = false;
 
   @override
   void initState() {
     super.initState();
     _type = widget.item?.type ?? AppConstants.portfolioTypes.first;
     _nameController = TextEditingController(text: widget.item?.name ?? '');
+    _symbolController = TextEditingController(text: '');
     _quantityController = TextEditingController(
       text: widget.item?.quantity.toString() ?? '',
     );
@@ -315,29 +346,78 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
     _currentValueController = TextEditingController(
       text: widget.item?.currentValue.toString() ?? '',
     );
+    _purchaseDate = widget.item?.purchaseDate ?? DateTime.now();
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _symbolController.dispose();
     _quantityController.dispose();
     _purchasePriceController.dispose();
     _currentValueController.dispose();
     super.dispose();
   }
 
+  double get _totalCost {
+    final quantity = double.tryParse(_quantityController.text) ?? 0;
+    final price = double.tryParse(_purchasePriceController.text) ?? 0;
+    return quantity * price;
+  }
+
+  Future<void> _lookupStockSymbol(String symbol) async {
+    if (symbol.isEmpty) return;
+
+    setState(() {
+      _isLoadingPrice = true;
+      _suggestedPrice = null;
+    });
+
+    // Simulate API call for demo purposes
+    // In production, use a real stock API like Alpha Vantage, Yahoo Finance, or IEX Cloud
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // Mock data for common stocks
+    final mockPrices = {
+      'AAPL': 175.50,
+      'GOOGL': 140.25,
+      'MSFT': 378.90,
+      'AMZN': 145.30,
+      'TSLA': 242.80,
+      'META': 485.20,
+      'NVDA': 875.60,
+      'AMD': 165.40,
+      'NFLX': 490.30,
+      'DIS': 112.50,
+    };
+
+    setState(() {
+      _suggestedPrice = mockPrices[symbol.toUpperCase()];
+      _isLoadingPrice = false;
+      if (_suggestedPrice != null) {
+        _currentValueController.text = _suggestedPrice.toString();
+      }
+    });
+  }
+
   void _save() {
     if (!_formKey.currentState!.validate()) return;
 
     final portfolioService = context.read<PortfolioService>();
+
+    // For simplified assets, quantity is always 1 (since we don't ask for it)
+    final quantity = _isSimplifiedAssetType()
+        ? 1.0
+        : double.parse(_quantityController.text);
+
     final item = PortfolioItem(
       id: widget.item?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
       type: _type,
       name: _nameController.text,
-      quantity: double.parse(_quantityController.text),
+      quantity: quantity,
       purchasePrice: double.parse(_purchasePriceController.text),
       currentValue: double.parse(_currentValueController.text),
-      purchaseDate: widget.item?.purchaseDate ?? DateTime.now(),
+      purchaseDate: _purchaseDate,
       lastUpdated: DateTime.now(),
     );
 
@@ -357,75 +437,989 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
     }
   }
 
+  List<Widget> _buildSharesFields(BuildContext context) {
+    return [
+      // Asset Symbol
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Stock Symbol',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _symbolController,
+            decoration: InputDecoration(
+              hintText: 'e.g., AAPL, GOOGL',
+              prefixIcon: Icon(
+                Icons.search,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              suffixIcon: _isLoadingPrice
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : _suggestedPrice != null
+                      ? Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Chip(
+                            label: Text(
+                              '\$${_suggestedPrice!.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            backgroundColor: Colors.green[100],
+                            padding: EdgeInsets.zero,
+                          ),
+                        )
+                      : null,
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+            ),
+            textCapitalization: TextCapitalization.characters,
+            onChanged: (value) {
+              if (value.length >= 2) {
+                _lookupStockSymbol(value);
+              }
+            },
+            validator: (v) => v?.isEmpty == true ? 'Required' : null,
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+
+      // Asset Name
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Company Name',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _nameController,
+            decoration: InputDecoration(
+              hintText: 'e.g., Apple Inc.',
+              prefixIcon: Icon(
+                Icons.business,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+            ),
+            validator: (v) => v?.isEmpty == true ? 'Required' : null,
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+
+      // Quantity
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Quantity',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _quantityController,
+            decoration: InputDecoration(
+              hintText: 'Number of shares',
+              prefixIcon: Icon(
+                Icons.numbers,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+            ),
+            keyboardType: TextInputType.number,
+            onChanged: (_) => setState(() {}),
+            validator: (v) => v?.isEmpty == true ? 'Required' : null,
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+
+      // Purchase Price
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Purchase Price (per share)',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _purchasePriceController,
+            decoration: InputDecoration(
+              hintText: 'Price per share',
+              prefixIcon: Icon(
+                Icons.attach_money,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+            ),
+            keyboardType: TextInputType.number,
+            onChanged: (_) => setState(() {}),
+            validator: (v) => v?.isEmpty == true ? 'Required' : null,
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+
+      // Purchase Date
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Purchase Date',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: () async {
+              final date = await showDatePicker(
+                context: context,
+                initialDate: _purchaseDate,
+                firstDate: DateTime(2000),
+                lastDate: DateTime.now(),
+              );
+              if (date != null) {
+                setState(() => _purchaseDate = date);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    DateFormat('MMM dd, yyyy').format(_purchaseDate),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+
+      // Total Cost (calculated)
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Total Cost',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              border: Border.all(color: Colors.blue[200]!),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.calculate,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '\$${_totalCost.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '(${_quantityController.text.isEmpty ? '0' : _quantityController.text} × \$${_purchasePriceController.text.isEmpty ? '0' : _purchasePriceController.text})',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+
+      // Current Value per share
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Current Value (per share)',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _currentValueController,
+            decoration: InputDecoration(
+              hintText: 'Current price per share',
+              prefixIcon: Icon(
+                Icons.trending_up,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+            ),
+            keyboardType: TextInputType.number,
+            validator: (v) => v?.isEmpty == true ? 'Required' : null,
+          ),
+        ],
+      ),
+    ];
+  }
+
+  List<Widget> _buildSimplifiedFields(BuildContext context) {
+    // For Real Estate, Watches, Cash, Retirement Fund
+    return [
+      // Asset Name
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Asset Name',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _nameController,
+            decoration: InputDecoration(
+              hintText: _getHintForType(),
+              prefixIcon: Icon(
+                Icons.label_outline,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+            ),
+            validator: (v) => v?.isEmpty == true ? 'Required' : null,
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+
+      // Purchase Price
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Purchase Price',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _purchasePriceController,
+            decoration: InputDecoration(
+              hintText: 'Total purchase price',
+              prefixIcon: Icon(
+                Icons.attach_money,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+            ),
+            keyboardType: TextInputType.number,
+            validator: (v) => v?.isEmpty == true ? 'Required' : null,
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+
+      // Purchase Date
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Purchase Date',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: () async {
+              final date = await showDatePicker(
+                context: context,
+                initialDate: _purchaseDate,
+                firstDate: DateTime(2000),
+                lastDate: DateTime.now(),
+              );
+              if (date != null) {
+                setState(() => _purchaseDate = date);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    DateFormat('MMM dd, yyyy').format(_purchaseDate),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+
+      // Current Value
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Current Value',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _currentValueController,
+            decoration: InputDecoration(
+              hintText: 'Current total value',
+              prefixIcon: Icon(
+                Icons.trending_up,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+            ),
+            keyboardType: TextInputType.number,
+            validator: (v) => v?.isEmpty == true ? 'Required' : null,
+          ),
+        ],
+      ),
+    ];
+  }
+
+  List<Widget> _buildGenericFields(BuildContext context) {
+    // For Crypto - needs quantity
+    return [
+      // Asset Name
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Asset Name',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _nameController,
+            decoration: InputDecoration(
+              hintText: 'e.g., Bitcoin, Ethereum',
+              prefixIcon: Icon(
+                Icons.label_outline,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+            ),
+            validator: (v) => v?.isEmpty == true ? 'Required' : null,
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+
+      // Quantity
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Quantity',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _quantityController,
+            decoration: InputDecoration(
+              hintText: 'Number of units',
+              prefixIcon: Icon(
+                Icons.numbers,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+            ),
+            keyboardType: TextInputType.number,
+            validator: (v) => v?.isEmpty == true ? 'Required' : null,
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+
+      // Purchase Price
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Purchase Price',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _purchasePriceController,
+            decoration: InputDecoration(
+              hintText: 'Price per unit',
+              prefixIcon: Icon(
+                Icons.shopping_cart_outlined,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+            ),
+            keyboardType: TextInputType.number,
+            validator: (v) => v?.isEmpty == true ? 'Required' : null,
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+
+      // Current Value
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Current Value',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _currentValueController,
+            decoration: InputDecoration(
+              hintText: 'Current price per unit',
+              prefixIcon: Icon(
+                Icons.trending_up,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+            ),
+            keyboardType: TextInputType.number,
+            validator: (v) => v?.isEmpty == true ? 'Required' : null,
+          ),
+        ],
+      ),
+    ];
+  }
+
+  String _getHintForType() {
+    switch (_type) {
+      case AppConstants.typeRealEstate:
+        return 'e.g., Downtown Apartment';
+      case AppConstants.typeWatches:
+        return 'e.g., Rolex Submariner';
+      case AppConstants.typeCash:
+        return 'e.g., Savings Account';
+      case AppConstants.typeRetirementFund:
+        return 'e.g., 401k Plan';
+      default:
+        return 'Enter asset name';
+    }
+  }
+
+  bool _isSimplifiedAssetType() {
+    return _type == AppConstants.typeRealEstate ||
+        _type == AppConstants.typeWatches ||
+        _type == AppConstants.typeCash ||
+        _type == AppConstants.typeRetirementFund;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.item == null ? 'Add Asset' : 'Edit Asset'),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: _type,
-                decoration: const InputDecoration(labelText: 'Type'),
-                items: AppConstants.portfolioTypes
-                    .map((type) => DropdownMenuItem(
-                          value: type,
-                          child: Text(type),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) setState(() => _type = value);
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-                validator: (v) => v?.isEmpty == true ? 'Required' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _quantityController,
-                decoration: const InputDecoration(labelText: 'Quantity'),
-                keyboardType: TextInputType.number,
-                validator: (v) => v?.isEmpty == true ? 'Required' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _purchasePriceController,
-                decoration: const InputDecoration(labelText: 'Purchase Price'),
-                keyboardType: TextInputType.number,
-                validator: (v) => v?.isEmpty == true ? 'Required' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _currentValueController,
-                decoration: const InputDecoration(labelText: 'Current Value'),
-                keyboardType: TextInputType.number,
-                validator: (v) => v?.isEmpty == true ? 'Required' : null,
-              ),
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
+      elevation: 8,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).colorScheme.primary.withOpacity(0.02),
+              Theme.of(context).colorScheme.secondary.withOpacity(0.02),
             ],
           ),
         ),
-      ),
-      actions: [
-        if (widget.item != null)
-          TextButton(
-            onPressed: _delete,
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header with icon
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Theme.of(context).colorScheme.primary,
+                            Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        widget.item == null
+                            ? Icons.add_circle_outline
+                            : Icons.edit_outlined,
+                        size: 32,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    widget.item == null ? 'Add New Asset' : 'Edit Asset',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.item == null
+                        ? 'Add a new asset to your portfolio'
+                        : 'Update asset details',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Asset Type
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Asset Type',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: _type,
+                        decoration: InputDecoration(
+                          hintText: 'Select asset type',
+                          prefixIcon: Icon(
+                            Icons.category_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                        items: AppConstants.portfolioTypes
+                            .map((type) => DropdownMenuItem(
+                                  value: type,
+                                  child: Text(type),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) setState(() => _type = value);
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Dynamic fields based on asset type
+                  if (_type == AppConstants.typeShares)
+                    ..._buildSharesFields(context)
+                  else if (_isSimplifiedAssetType())
+                    ..._buildSimplifiedFields(context)
+                  else
+                    ..._buildGenericFields(context),
+
+                  const SizedBox(height: 32),
+
+                  // Divider
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: Colors.grey[300])),
+                      if (widget.item != null) ...[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'ACTIONS',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Expanded(child: Divider(color: Colors.grey[300])),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Action Buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (widget.item != null) ...[
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _delete,
+                            icon: const Icon(Icons.delete_outline, size: 18),
+                            label: const Text('Delete'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              side: const BorderSide(color: Colors.red),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            side: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: widget.item != null ? 1 : 2,
+                        child: ElevatedButton.icon(
+                          onPressed: _save,
+                          icon: Icon(
+                            widget.item == null ? Icons.add : Icons.check,
+                            size: 18,
+                          ),
+                          label: Text(
+                            widget.item == null ? 'Add Asset' : 'Save',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
         ),
-        ElevatedButton(
-          onPressed: _save,
-          child: const Text('Save'),
-        ),
-      ],
+      ),
     );
   }
 }

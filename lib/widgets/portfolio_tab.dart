@@ -267,33 +267,8 @@ class PortfolioTab extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               ..._buildAssetTypeSummary(portfolioService, currencyFormatter),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
             ],
-
-            // Quick Action Button
-            Center(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).pushNamed('/portfolio');
-                },
-                icon: const Icon(Icons.add_circle_outline),
-                label: const Text(
-                  'Manage Portfolio Items',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 3,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
           ],
         ),
       ),

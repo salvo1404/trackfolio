@@ -76,6 +76,8 @@ class AppTheme {
         return const Color(0xFF8E24AA);
       case AppConstants.typeCash:
         return const Color(0xFF43A047);
+      case AppConstants.typeRetirementFund:
+        return const Color(0xFF00897B);
       default:
         return primaryColor;
     }

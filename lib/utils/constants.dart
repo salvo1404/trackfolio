@@ -24,6 +24,7 @@ class AppConstants {
   static const String typeRealEstate = 'Real Estate';
   static const String typeWatches = 'Watches';
   static const String typeCash = 'Cash';
+  static const String typeRetirementFund = 'Retirement Fund';
 
   static const List<String> portfolioTypes = [
     typeShares,
@@ -31,6 +32,7 @@ class AppConstants {
     typeRealEstate,
     typeWatches,
     typeCash,
+    typeRetirementFund,
   ];
 
   // Budget Categories
