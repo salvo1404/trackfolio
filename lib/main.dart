@@ -30,14 +30,17 @@ class TrackfolioApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        Provider(
+          create: (_) => CurrencyService(),
+        ),
         ChangeNotifierProvider(
           create: (_) => AuthService(storage),
         ),
         ChangeNotifierProvider(
-          create: (_) => PortfolioService(storage)..initializeSampleData(),
-        ),
-        Provider(
-          create: (_) => CurrencyService(),
+          create: (context) => PortfolioService(
+            storage,
+            context.read<CurrencyService>(),
+          ),
         ),
       ],
       child: Consumer<AuthService>(

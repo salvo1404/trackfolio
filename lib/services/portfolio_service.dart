@@ -5,16 +5,18 @@ import '../models/transaction.dart';
 import '../models/goal.dart';
 import '../models/share_transaction.dart';
 import 'storage_service.dart';
+import 'currency_service.dart';
 
 class PortfolioService extends ChangeNotifier {
   final StorageService _storage;
+  final CurrencyService _currencyService;
   List<PortfolioItem> _portfolioItems = [];
   List<Budget> _budgets = [];
   List<Transaction> _transactions = [];
   List<Goal> _goals = [];
   List<ShareTransaction> _shareTransactions = [];
 
-  PortfolioService(this._storage) {
+  PortfolioService(this._storage, this._currencyService) {
     _loadData();
   }
 
@@ -25,11 +27,27 @@ class PortfolioService extends ChangeNotifier {
   List<ShareTransaction> get shareTransactions => _shareTransactions;
 
   double get totalPortfolioValue {
-    return _portfolioItems.fold(0, (sum, item) => sum + item.totalValue);
+    return _portfolioItems.fold(0, (sum, item) {
+      // Convert item's value from its currency to USD
+      final valueInUSD = _currencyService.convertBetween(
+        item.totalValue,
+        item.currency,
+        'USD',
+      );
+      return sum + valueInUSD;
+    });
   }
 
   double get totalPortfolioCost {
-    return _portfolioItems.fold(0, (sum, item) => sum + item.totalCost);
+    return _portfolioItems.fold(0, (sum, item) {
+      // Convert item's cost from its currency to USD
+      final costInUSD = _currencyService.convertBetween(
+        item.totalCost,
+        item.currency,
+        'USD',
+      );
+      return sum + costInUSD;
+    });
   }
 
   double get totalGainLoss => totalPortfolioValue - totalPortfolioCost;
@@ -37,7 +55,13 @@ class PortfolioService extends ChangeNotifier {
   Map<String, double> get portfolioByType {
     final Map<String, double> result = {};
     for (final item in _portfolioItems) {
-      result[item.type] = (result[item.type] ?? 0) + item.totalValue;
+      // Convert item's value from its currency to USD
+      final valueInUSD = _currencyService.convertBetween(
+        item.totalValue,
+        item.currency,
+        'USD',
+      );
+      result[item.type] = (result[item.type] ?? 0) + valueInUSD;
     }
     return result;
   }
@@ -158,136 +182,4 @@ class PortfolioService extends ChangeNotifier {
     return sorted.take(limit).toList();
   }
 
-  // Initialize with sample data
-  Future<void> initializeSampleData() async {
-    if (_portfolioItems.isEmpty) {
-      // Add sample portfolio items
-      await addPortfolioItem(PortfolioItem(
-        id: '1',
-        type: 'Shares',
-        name: 'AAPL - Apple Inc.',
-        quantity: 10,
-        purchasePrice: 150.0,
-        currentValue: 175.0,
-        purchaseDate: DateTime.now().subtract(const Duration(days: 90)),
-        lastUpdated: DateTime.now(),
-      ));
-
-      await addPortfolioItem(PortfolioItem(
-        id: '2',
-        type: 'Crypto',
-        name: 'Bitcoin',
-        quantity: 0.5,
-        purchasePrice: 45000.0,
-        currentValue: 50000.0,
-        purchaseDate: DateTime.now().subtract(const Duration(days: 60)),
-        lastUpdated: DateTime.now(),
-      ));
-
-      await addPortfolioItem(PortfolioItem(
-        id: '3',
-        type: 'Cash',
-        name: 'Savings Account',
-        quantity: 1,
-        purchasePrice: 10000.0,
-        currentValue: 10000.0,
-        purchaseDate: DateTime.now().subtract(const Duration(days: 365)),
-        lastUpdated: DateTime.now(),
-      ));
-    }
-
-    if (_budgets.isEmpty) {
-      // Add sample budgets
-      await addBudget(Budget(
-        id: '1',
-        category: 'Food & Dining',
-        amount: 500.0,
-        period: 'monthly',
-        spent: 320.0,
-        createdAt: DateTime.now(),
-      ));
-
-      await addBudget(Budget(
-        id: '2',
-        category: 'Transportation',
-        amount: 300.0,
-        period: 'monthly',
-        spent: 180.0,
-        createdAt: DateTime.now(),
-      ));
-
-      await addBudget(Budget(
-        id: '3',
-        category: 'Entertainment',
-        amount: 200.0,
-        period: 'monthly',
-        spent: 150.0,
-        createdAt: DateTime.now(),
-      ));
-    }
-
-    if (_goals.isEmpty) {
-      // Add sample goals
-      await addGoal(Goal(
-        id: '1',
-        title: 'Emergency Fund',
-        description: 'Build 6 months emergency fund',
-        targetAmount: 30000.0,
-        currentAmount: 12000.0,
-        targetDate: DateTime.now().add(const Duration(days: 365)),
-        category: 'Emergency Fund',
-        createdAt: DateTime.now(),
-      ));
-
-      await addGoal(Goal(
-        id: '2',
-        title: 'Vacation Fund',
-        description: 'Save for summer vacation',
-        targetAmount: 5000.0,
-        currentAmount: 2500.0,
-        targetDate: DateTime.now().add(const Duration(days: 180)),
-        category: 'Vacation',
-        createdAt: DateTime.now(),
-      ));
-    }
-
-    if (_shareTransactions.isEmpty) {
-      // Add sample share transactions
-      await addShareTransaction(ShareTransaction(
-        id: '1',
-        shareName: 'Apple Inc.',
-        symbol: 'AAPL',
-        type: 'buy',
-        quantity: 10,
-        pricePerShare: 150.0,
-        transactionDate: DateTime.now().subtract(const Duration(days: 90)),
-        notes: 'Initial purchase',
-        createdAt: DateTime.now(),
-      ));
-
-      await addShareTransaction(ShareTransaction(
-        id: '2',
-        shareName: 'Microsoft Corporation',
-        symbol: 'MSFT',
-        type: 'buy',
-        quantity: 5,
-        pricePerShare: 320.0,
-        transactionDate: DateTime.now().subtract(const Duration(days: 60)),
-        notes: 'Tech portfolio diversification',
-        createdAt: DateTime.now(),
-      ));
-
-      await addShareTransaction(ShareTransaction(
-        id: '3',
-        shareName: 'Tesla Inc.',
-        symbol: 'TSLA',
-        type: 'sell',
-        quantity: 2,
-        pricePerShare: 250.0,
-        transactionDate: DateTime.now().subtract(const Duration(days: 15)),
-        notes: 'Profit taking',
-        createdAt: DateTime.now(),
-      ));
-    }
-  }
 }

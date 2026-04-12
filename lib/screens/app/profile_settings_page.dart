@@ -47,6 +47,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     'BRL',
     'ZAR',
     'MXN',
+    'AED',
   ];
 
   @override

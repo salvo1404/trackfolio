@@ -9,6 +9,7 @@ class PortfolioItem {
   final double currentValue;
   final DateTime purchaseDate;
   final DateTime lastUpdated;
+  final String currency; // Currency code (USD, EUR, etc.)
 
   PortfolioItem({
     required this.id,
@@ -19,6 +20,7 @@ class PortfolioItem {
     required this.currentValue,
     required this.purchaseDate,
     required this.lastUpdated,
+    this.currency = 'USD', // Default to USD
   });
 
   double get totalValue => quantity * currentValue;
@@ -36,6 +38,7 @@ class PortfolioItem {
       'currentValue': currentValue,
       'purchaseDate': purchaseDate.toIso8601String(),
       'lastUpdated': lastUpdated.toIso8601String(),
+      'currency': currency,
     };
   }
 
@@ -49,6 +52,7 @@ class PortfolioItem {
       currentValue: (json['currentValue'] as num).toDouble(),
       purchaseDate: DateTime.parse(json['purchaseDate']),
       lastUpdated: DateTime.parse(json['lastUpdated']),
+      currency: json['currency'] ?? 'USD', // Default to USD if not present
     );
   }
 
@@ -67,6 +71,7 @@ class PortfolioItem {
     double? currentValue,
     DateTime? purchaseDate,
     DateTime? lastUpdated,
+    String? currency,
   }) {
     return PortfolioItem(
       id: id ?? this.id,
@@ -77,6 +82,7 @@ class PortfolioItem {
       currentValue: currentValue ?? this.currentValue,
       purchaseDate: purchaseDate ?? this.purchaseDate,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      currency: currency ?? this.currency,
     );
   }
 }

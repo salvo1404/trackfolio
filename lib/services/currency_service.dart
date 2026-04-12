@@ -13,6 +13,7 @@ class CurrencyService {
     'BRL': 4.97,
     'ZAR': 18.65,
     'MXN': 17.15,
+    'AED': 3.67,
   };
 
   static const Map<String, String> _currencySymbols = {
@@ -28,6 +29,7 @@ class CurrencyService {
     'BRL': 'R\$',
     'ZAR': 'R',
     'MXN': 'MX\$',
+    'AED': 'د.إ',
   };
 
   /// Convert amount from USD to target currency

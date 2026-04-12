@@ -6,6 +6,7 @@ import '../models/portfolio_item.dart';
 import '../services/portfolio_service.dart';
 import '../services/auth_service.dart';
 import '../services/currency_service.dart';
+import '../services/stock_api_service.dart';
 import '../utils/theme.dart';
 import '../utils/constants.dart';
 import '../utils/currency_formatter.dart';
@@ -114,7 +115,7 @@ class ShareTrackerTab extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  ..._buildGroupedPortfolioItems(context, portfolioService, currencyFormatter),
+                  ..._buildGroupedPortfolioItems(context, portfolioService, currencyFormatter, currencyService),
                 ],
               ),
             ),
@@ -125,6 +126,7 @@ class ShareTrackerTab extends StatelessWidget {
     BuildContext context,
     PortfolioService portfolioService,
     CurrencyFormatter currencyFormatter,
+    CurrencyService currencyService,
   ) {
     // Group items by type
     final itemsByType = <String, List<PortfolioItem>>{};
@@ -132,15 +134,40 @@ class ShareTrackerTab extends StatelessWidget {
       itemsByType.putIfAbsent(item.type, () => []).add(item);
     }
 
-    final widgets = <Widget>[];
-
+    // Calculate total values for each type and sort
+    final typeData = <Map<String, dynamic>>[];
     for (final entry in itemsByType.entries) {
       final type = entry.key;
       final items = entry.value;
       final totalValue = items.fold<double>(
         0,
-        (sum, item) => sum + item.totalValue,
+        (sum, item) {
+          // Convert item's value from its currency to USD
+          final valueInUSD = currencyService.convertBetween(
+            item.totalValue,
+            item.currency,
+            'USD',
+          );
+          return sum + valueInUSD;
+        },
       );
+
+      typeData.add({
+        'type': type,
+        'items': items,
+        'totalValue': totalValue,
+      });
+    }
+
+    // Sort by total value descending (highest first)
+    typeData.sort((a, b) => (b['totalValue'] as double).compareTo(a['totalValue'] as double));
+
+    final widgets = <Widget>[];
+
+    for (final data in typeData) {
+      final type = data['type'] as String;
+      final items = data['items'] as List<PortfolioItem>;
+      final totalValue = data['totalValue'] as double;
 
       // Category header
       widgets.add(
@@ -186,6 +213,18 @@ class ShareTrackerTab extends StatelessWidget {
 
       // Items in this category
       for (final item in items) {
+        // Format values in the item's original currency
+        final itemCurrencySymbol = currencyService.getSymbol(item.currency);
+        final decimalDigits = item.currency == 'JPY' ? 0 : 2;
+
+        String formatInItemCurrency(double value) {
+          final formatter = NumberFormat.currency(
+            symbol: itemCurrencySymbol,
+            decimalDigits: decimalDigits,
+          );
+          return formatter.format(value);
+        }
+
         final gainLossColor = item.gainLoss >= 0
             ? AppTheme.successColor
             : AppTheme.errorColor;
@@ -201,66 +240,230 @@ class ShareTrackerTab extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               onTap: () => _showEditItemDialog(context, item),
               child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '${item.quantity.toStringAsFixed(2)} units',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 13,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
+                    // Header with name and edit icon
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                currencyFormatter.format(item.totalValue),
+                                item.name,
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(height: 4),
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: gainLossColor.withOpacity(0.1),
+                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  '${item.gainLoss >= 0 ? '+' : ''}${currencyFormatter.format(item.gainLoss)} (${item.gainLossPercent.toStringAsFixed(1)}%)',
+                                  item.currency,
                                   style: TextStyle(
-                                    color: gainLossColor,
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).colorScheme.primary,
                                   ),
                                 ),
                               ),
                             ],
                           ),
+                        ),
+                        Icon(
+                          Icons.edit_outlined,
+                          color: Colors.grey[400],
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Details grid - responsive layout
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isWideScreen = constraints.maxWidth > 800;
+
+                        if (isWideScreen) {
+                          // Wide screen: single row with all 6 fields
+                          return Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _DetailItem(
+                                      label: 'Quantity',
+                                      value: item.quantity.toStringAsFixed(2),
+                                      icon: Icons.numbers,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _DetailItem(
+                                      label: 'Purchase Date',
+                                      value: DateFormat('MMM dd, yyyy').format(item.purchaseDate),
+                                      icon: Icons.calendar_today,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _DetailItem(
+                                      label: 'Purchase Price',
+                                      value: formatInItemCurrency(item.purchasePrice),
+                                      icon: Icons.shopping_cart_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _DetailItem(
+                                      label: 'Current Value',
+                                      value: formatInItemCurrency(item.currentValue),
+                                      icon: Icons.trending_up,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _DetailItem(
+                                      label: 'Total Cost',
+                                      value: formatInItemCurrency(item.totalCost),
+                                      icon: Icons.calculate,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _DetailItem(
+                                      label: 'Total Value',
+                                      value: formatInItemCurrency(item.totalValue),
+                                      icon: Icons.account_balance_wallet,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                          );
+                        } else {
+                          // Narrow screen: 3 rows with 2 fields each
+                          return Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _DetailItem(
+                                      label: 'Quantity',
+                                      value: item.quantity.toStringAsFixed(2),
+                                      icon: Icons.numbers,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _DetailItem(
+                                      label: 'Purchase Date',
+                                      value: DateFormat('MMM dd, yyyy').format(item.purchaseDate),
+                                      icon: Icons.calendar_today,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _DetailItem(
+                                      label: 'Purchase Price',
+                                      value: formatInItemCurrency(item.purchasePrice),
+                                      icon: Icons.shopping_cart_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _DetailItem(
+                                      label: 'Current Value',
+                                      value: formatInItemCurrency(item.currentValue),
+                                      icon: Icons.trending_up,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _DetailItem(
+                                      label: 'Total Cost',
+                                      value: formatInItemCurrency(item.totalCost),
+                                      icon: Icons.calculate,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _DetailItem(
+                                      label: 'Total Value',
+                                      value: formatInItemCurrency(item.totalValue),
+                                      icon: Icons.account_balance_wallet,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                          );
+                        }
+                      },
+                    ),
+
+                    // Gain/Loss section
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: gainLossColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: gainLossColor.withOpacity(0.3),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                item.gainLoss >= 0
+                                    ? Icons.trending_up
+                                    : Icons.trending_down,
+                                color: gainLossColor,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Gain/Loss',
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            '${item.gainLoss >= 0 ? '+' : ''}${formatInItemCurrency(item.gainLoss)} (${item.gainLossPercent.toStringAsFixed(1)}%)',
+                            style: TextStyle(
+                              color: gainLossColor,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                    Icon(
-                      Icons.edit_outlined,
-                      color: Colors.grey[400],
-                      size: 22,
                     ),
                   ],
                 ),
@@ -321,7 +524,9 @@ class _PortfolioItemDialog extends StatefulWidget {
 
 class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _stockApiService = StockApiService();
   late String _type;
+  late String _currency;
   late TextEditingController _nameController;
   late TextEditingController _symbolController;
   late TextEditingController _quantityController;
@@ -330,11 +535,18 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
   late DateTime _purchaseDate;
   double? _suggestedPrice;
   bool _isLoadingPrice = false;
+  String? _symbolLookupMessage;
+
+  final List<String> _currencies = [
+    'USD', 'EUR', 'GBP', 'JPY', 'CNY', 'INR',
+    'AUD', 'CAD', 'CHF', 'BRL', 'ZAR', 'MXN', 'AED'
+  ];
 
   @override
   void initState() {
     super.initState();
     _type = widget.item?.type ?? AppConstants.portfolioTypes.first;
+    _currency = widget.item?.currency ?? 'USD';
     _nameController = TextEditingController(text: widget.item?.name ?? '');
     _symbolController = TextEditingController(text: '');
     _quantityController = TextEditingController(
@@ -366,38 +578,56 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
   }
 
   Future<void> _lookupStockSymbol(String symbol) async {
-    if (symbol.isEmpty) return;
+    if (symbol.isEmpty) {
+      setState(() {
+        _suggestedPrice = null;
+        _isLoadingPrice = false;
+        _symbolLookupMessage = null;
+      });
+      return;
+    }
 
     setState(() {
       _isLoadingPrice = true;
       _suggestedPrice = null;
+      _symbolLookupMessage = null;
     });
 
-    // Simulate API call for demo purposes
-    // In production, use a real stock API like Alpha Vantage, Yahoo Finance, or IEX Cloud
-    await Future.delayed(const Duration(milliseconds: 500));
+    try {
+      // Fetch real stock data from Alpha Vantage API
+      final stockData = await _stockApiService.lookupStock(symbol);
 
-    // Mock data for common stocks
-    final mockPrices = {
-      'AAPL': 175.50,
-      'GOOGL': 140.25,
-      'MSFT': 378.90,
-      'AMZN': 145.30,
-      'TSLA': 242.80,
-      'META': 485.20,
-      'NVDA': 875.60,
-      'AMD': 165.40,
-      'NFLX': 490.30,
-      'DIS': 112.50,
-    };
+      if (!mounted) return;
 
-    setState(() {
-      _suggestedPrice = mockPrices[symbol.toUpperCase()];
-      _isLoadingPrice = false;
-      if (_suggestedPrice != null) {
-        _currentValueController.text = _suggestedPrice.toString();
-      }
-    });
+      setState(() {
+        if (stockData != null && stockData['price'] != null) {
+          _suggestedPrice = stockData['price'] as double;
+          _currentValueController.text = _suggestedPrice!.toStringAsFixed(2);
+
+          final symbolName = stockData['symbol'] as String;
+          final name = stockData['name'] ?? symbolName;
+
+          _symbolLookupMessage = '✓ $name - \$${_suggestedPrice!.toStringAsFixed(2)}';
+
+          // Auto-fill company name if the name field is empty
+          if (_nameController.text.isEmpty && stockData['name'] != null) {
+            _nameController.text = stockData['name'] as String;
+          }
+        } else {
+          _suggestedPrice = null;
+          _symbolLookupMessage = 'Symbol not found. Please verify and enter manually.';
+        }
+        _isLoadingPrice = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _suggestedPrice = null;
+        _symbolLookupMessage = 'Error fetching data. Please try again or enter manually.';
+        _isLoadingPrice = false;
+      });
+    }
   }
 
   void _save() {
@@ -419,6 +649,7 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
       currentValue: double.parse(_currentValueController.text),
       purchaseDate: _purchaseDate,
       lastUpdated: DateTime.now(),
+      currency: _currency,
     );
 
     if (widget.item == null) {
@@ -456,6 +687,18 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
             controller: _symbolController,
             decoration: InputDecoration(
               hintText: 'e.g., AAPL, GOOGL',
+              helperText: _isLoadingPrice
+                  ? 'Looking up symbol...'
+                  : _symbolLookupMessage,
+              helperStyle: TextStyle(
+                color: _suggestedPrice != null
+                    ? Colors.green[700]
+                    : (_symbolLookupMessage != null ? Colors.orange[700] : null),
+                fontWeight: _symbolLookupMessage != null
+                    ? FontWeight.w600
+                    : null,
+              ),
+              helperMaxLines: 2,
               prefixIcon: Icon(
                 Icons.search,
                 color: Theme.of(context).colorScheme.primary,
@@ -470,19 +713,10 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                       ),
                     )
                   : _suggestedPrice != null
-                      ? Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Chip(
-                            label: Text(
-                              '\$${_suggestedPrice!.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            backgroundColor: Colors.green[100],
-                            padding: EdgeInsets.zero,
-                          ),
+                      ? Icon(
+                          Icons.check_circle,
+                          color: Colors.green[600],
+                          size: 24,
                         )
                       : null,
               filled: true,
@@ -504,8 +738,14 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
             ),
             textCapitalization: TextCapitalization.characters,
             onChanged: (value) {
-              if (value.length >= 2) {
+              if (value.length >= 3) {
                 _lookupStockSymbol(value);
+              } else {
+                setState(() {
+                  _suggestedPrice = null;
+                  _symbolLookupMessage = null;
+                  _isLoadingPrice = false;
+                });
               }
             },
             validator: (v) => v?.isEmpty == true ? 'Required' : null,
@@ -1318,6 +1558,58 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                   ),
                   const SizedBox(height: 20),
 
+                  // Currency
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Currency',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: _currency,
+                        decoration: InputDecoration(
+                          hintText: 'Select currency',
+                          prefixIcon: Icon(
+                            Icons.attach_money,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                        items: _currencies
+                            .map((currency) => DropdownMenuItem(
+                                  value: currency,
+                                  child: Text(currency),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) setState(() => _currency = value);
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
                   // Dynamic fields based on asset type
                   if (_type == AppConstants.typeShares)
                     ..._buildSharesFields(context)
@@ -1419,6 +1711,64 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// Helper widget for displaying detail items in tracker tab
+class _DetailItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+
+  const _DetailItem({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: Colors.grey[600],
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }

@@ -78,7 +78,46 @@ class TabbedDashboardPage extends StatelessWidget {
   }
 }
 
-class _ProfileDrawer extends StatelessWidget {
+class _ProfileDrawer extends StatefulWidget {
+  @override
+  State<_ProfileDrawer> createState() => _ProfileDrawerState();
+}
+
+class _ProfileDrawerState extends State<_ProfileDrawer> {
+  final List<String> _countries = [
+    'United States',
+    'United Kingdom',
+    'Canada',
+    'Australia',
+    'Germany',
+    'France',
+    'Italy',
+    'Spain',
+    'Japan',
+    'China',
+    'India',
+    'Brazil',
+    'Mexico',
+    'South Africa',
+    'United Arab Emirates',
+  ];
+
+  final List<String> _currencies = [
+    'USD',
+    'EUR',
+    'GBP',
+    'JPY',
+    'CNY',
+    'INR',
+    'AUD',
+    'CAD',
+    'CHF',
+    'BRL',
+    'ZAR',
+    'MXN',
+    'AED',
+  ];
+
   @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
@@ -134,34 +173,118 @@ class _ProfileDrawer extends StatelessWidget {
             subtitle: Text(user?.email ?? ''),
           ),
           const Divider(),
-          ListTile(
-            leading: const Icon(Icons.flag_outlined),
-            title: const Text('Country'),
-            subtitle: Text(user?.country ?? 'Not set'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const ProfileSettingsPage(),
+
+          // Country Dropdown
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.flag_outlined,
+                      color: Colors.grey[700],
+                      size: 20,
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      'Country',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.attach_money),
-            title: const Text('Default Currency'),
-            subtitle: Text(user?.currency ?? 'USD'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const ProfileSettingsPage(),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: user?.country,
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                  hint: const Text('Select country'),
+                  items: _countries
+                      .map((country) => DropdownMenuItem(
+                            value: country,
+                            child: Text(country),
+                          ))
+                      .toList(),
+                  onChanged: (value) async {
+                    if (value != null) {
+                      await authService.updateProfile(country: value);
+                    }
+                  },
                 ),
-              );
-            },
+              ],
+            ),
           ),
+
+          const SizedBox(height: 8),
+
+          // Currency Dropdown
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.attach_money,
+                      color: Colors.grey[700],
+                      size: 20,
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      'Default Currency',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: user?.currency ?? 'USD',
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                  items: _currencies
+                      .map((currency) => DropdownMenuItem(
+                            value: currency,
+                            child: Text(currency),
+                          ))
+                      .toList(),
+                  onChanged: (value) async {
+                    if (value != null) {
+                      await authService.updateProfile(currency: value);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+
           const Divider(),
           const SizedBox(height: 8),
           ListTile(

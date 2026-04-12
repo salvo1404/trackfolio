@@ -50,6 +50,9 @@ dependencies:
   # Number and currency formatting
   intl: ^0.20.1
 
+  # HTTP client for API calls
+  http: ^1.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

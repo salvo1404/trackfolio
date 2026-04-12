@@ -266,7 +266,7 @@ class PortfolioTab extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              ..._buildAssetTypeSummary(portfolioService, currencyFormatter),
+              ..._buildAssetTypeSummary(portfolioService, currencyFormatter, currencyService),
               const SizedBox(height: 20),
             ],
           ],
@@ -595,6 +595,7 @@ class PortfolioTab extends StatelessWidget {
   List<Widget> _buildAssetTypeSummary(
     PortfolioService portfolioService,
     CurrencyFormatter currencyFormatter,
+    CurrencyService currencyService,
   ) {
     // Group items by type and calculate totals
     final itemsByType = <String, List<PortfolioItem>>{};
@@ -602,19 +603,54 @@ class PortfolioTab extends StatelessWidget {
       itemsByType.putIfAbsent(item.type, () => []).add(item);
     }
 
-    final widgets = <Widget>[];
-
+    // Calculate totals for each type
+    final typeData = <Map<String, dynamic>>[];
     for (final entry in itemsByType.entries) {
       final type = entry.key;
       final items = entry.value;
       final totalValue = items.fold<double>(
         0,
-        (sum, item) => sum + item.totalValue,
+        (sum, item) {
+          // Convert item's value from its currency to USD
+          final valueInUSD = currencyService.convertBetween(
+            item.totalValue,
+            item.currency,
+            'USD',
+          );
+          return sum + valueInUSD;
+        },
       );
       final totalCost = items.fold<double>(
         0,
-        (sum, item) => sum + item.totalCost,
+        (sum, item) {
+          // Convert item's cost from its currency to USD
+          final costInUSD = currencyService.convertBetween(
+            item.totalCost,
+            item.currency,
+            'USD',
+          );
+          return sum + costInUSD;
+        },
       );
+
+      typeData.add({
+        'type': type,
+        'items': items,
+        'totalValue': totalValue,
+        'totalCost': totalCost,
+      });
+    }
+
+    // Sort by total value descending (highest first)
+    typeData.sort((a, b) => (b['totalValue'] as double).compareTo(a['totalValue'] as double));
+
+    final widgets = <Widget>[];
+
+    for (final data in typeData) {
+      final type = data['type'] as String;
+      final items = data['items'] as List<PortfolioItem>;
+      final totalValue = data['totalValue'] as double;
+      final totalCost = data['totalCost'] as double;
       final totalGainLoss = totalValue - totalCost;
       final gainLossColor = totalGainLoss >= 0
           ? AppTheme.successColor
