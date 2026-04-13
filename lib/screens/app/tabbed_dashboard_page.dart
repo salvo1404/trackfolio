@@ -75,7 +75,7 @@ class TabbedDashboardPage extends StatelessWidget {
           ],
         ),
         bottomNavigationBar: Container(
-          padding: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
           ),
