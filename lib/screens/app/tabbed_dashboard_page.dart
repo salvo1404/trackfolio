@@ -6,6 +6,7 @@ import '../../widgets/portfolio_tab.dart';
 import '../../widgets/goals_tab.dart';
 import '../../widgets/share_tracker_tab.dart';
 import '../../widgets/budgets_tab.dart';
+import '../../widgets/add_asset_tab.dart';
 import 'profile_settings_page.dart';
 
 class TabbedDashboardPage extends StatelessWidget {
@@ -16,7 +17,7 @@ class TabbedDashboardPage extends StatelessWidget {
     final authService = context.watch<AuthService>();
 
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(
@@ -68,6 +69,7 @@ class TabbedDashboardPage extends StatelessWidget {
           children: [
             PortfolioTab(),
             ShareTrackerTab(),
+            AddAssetTab(),
             GoalsTab(),
             BudgetsTab(),
           ],
@@ -100,6 +102,10 @@ class TabbedDashboardPage extends StatelessWidget {
               Tab(
                 icon: Icon(Icons.show_chart, size: 22),
                 text: 'Tracker',
+              ),
+              Tab(
+                icon: Icon(Icons.add_circle, size: 26),
+                text: 'Add',
               ),
               Tab(
                 icon: Icon(Icons.flag, size: 22),
