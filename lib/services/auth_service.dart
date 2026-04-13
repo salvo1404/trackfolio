@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../utils/constants.dart';
 import 'storage_service.dart';
+import 'demo_data_service.dart';
 
 class AuthService extends ChangeNotifier {
   final StorageService _storage;
@@ -111,6 +112,36 @@ class AuthService extends ChangeNotifier {
     return AuthResult(
       success: true,
       message: 'Login successful',
+    );
+  }
+
+  Future<AuthResult> loginDemo() async {
+    // Check if demo user exists
+    var demoUser = await _storage.getUser(DemoDataService.demoUsername);
+
+    if (demoUser == null) {
+      // Create demo user
+      demoUser = DemoDataService.createDemoUser();
+      await _storage.saveUser(demoUser);
+
+      // Populate demo data
+      await _storage.savePortfolioItems(DemoDataService.createDemoPortfolioItems());
+      await _storage.saveGoals(DemoDataService.createDemoGoals());
+      await _storage.saveBudgets(DemoDataService.createDemoBudgets());
+      await _storage.saveShareTransactions(DemoDataService.createDemoShareTransactions());
+    }
+
+    // Log in as demo user
+    _currentUser = demoUser;
+    _isLoggedIn = true;
+    await _storage.setBool(AppConstants.isLoggedInKey, true);
+    await _storage.setString(AppConstants.currentUserKey, DemoDataService.demoUsername);
+
+    notifyListeners();
+
+    return AuthResult(
+      success: true,
+      message: 'Demo account loaded successfully',
     );
   }
 

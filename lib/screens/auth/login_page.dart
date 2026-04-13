@@ -67,6 +67,38 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _handleDemoLogin() async {
+    setState(() => _isLoading = true);
+
+    final authService = context.read<AuthService>();
+    final result = await authService.loginDemo();
+
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    if (result.success) {
+      Navigator.of(context).pushReplacementNamed('/dashboard');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(child: Text(result.message)),
+            ],
+          ),
+          backgroundColor: AppTheme.errorColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -259,6 +291,40 @@ class _LoginPageState extends State<LoginPage> {
                                       ),
                                     ],
                                   ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Try Demo Account Button
+                          OutlinedButton(
+                            onPressed: _isLoading ? null : _handleDemoLogin,
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              side: BorderSide(
+                                color: Colors.green[600]!,
+                                width: 2,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.preview,
+                                  color: Colors.green[600],
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Try Demo Account',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.green[600],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 24),
 
