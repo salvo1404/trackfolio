@@ -75,7 +75,7 @@ class TabbedDashboardPage extends StatelessWidget {
           ],
         ),
         bottomNavigationBar: Container(
-          padding: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
           ),
@@ -85,7 +85,7 @@ class TabbedDashboardPage extends StatelessWidget {
             labelColor: Theme.of(context).colorScheme.primary,
             unselectedLabelColor: Colors.grey,
             indicatorSize: TabBarIndicatorSize.tab,
-            labelPadding: EdgeInsets.zero,
+            labelPadding: const EdgeInsets.symmetric(horizontal: 2),
             padding: EdgeInsets.zero,
             overlayColor: WidgetStateProperty.all(Colors.transparent),
             indicator: BoxDecoration(
