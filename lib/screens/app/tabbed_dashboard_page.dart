@@ -74,56 +74,88 @@ class TabbedDashboardPage extends StatelessWidget {
             BudgetsTab(),
           ],
         ),
-        bottomNavigationBar: Container(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-          ),
-          child: TabBar(
-            labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-            unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
-            labelColor: Theme.of(context).colorScheme.primary,
-            unselectedLabelColor: Colors.grey,
-            indicatorSize: TabBarIndicatorSize.tab,
-            labelPadding: const EdgeInsets.symmetric(horizontal: 2),
-            padding: EdgeInsets.zero,
-            overlayColor: WidgetStateProperty.all(Colors.transparent),
-            indicator: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: Theme.of(context).colorScheme.primary,
-                  width: 3,
+        bottomNavigationBar: SafeArea(
+          child: Container(
+            padding: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+            ),
+            child: TabBar(
+              labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              labelColor: Theme.of(context).colorScheme.primary,
+              unselectedLabelColor: Colors.grey,
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelPadding: EdgeInsets.zero,
+              padding: EdgeInsets.zero,
+              overlayColor: WidgetStateProperty.all(Colors.transparent),
+              indicator: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 3,
+                  ),
                 ),
               ),
+              dividerColor: Colors.transparent,
+              tabs: [
+                Tab(
+                  height: 60,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.account_balance_wallet, size: 28),
+                      SizedBox(height: 4),
+                      Text('Portfolio', style: TextStyle(fontSize: 11)),
+                    ],
+                  ),
+                ),
+                Tab(
+                  height: 60,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.show_chart, size: 28),
+                      SizedBox(height: 4),
+                      Text('Tracker', style: TextStyle(fontSize: 11)),
+                    ],
+                  ),
+                ),
+                Tab(
+                  height: 60,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.add_circle, size: 32),
+                      SizedBox(height: 4),
+                      Text('Add', style: TextStyle(fontSize: 11)),
+                    ],
+                  ),
+                ),
+                Tab(
+                  height: 60,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.flag, size: 28),
+                      SizedBox(height: 4),
+                      Text('Goals', style: TextStyle(fontSize: 11)),
+                    ],
+                  ),
+                ),
+                Tab(
+                  height: 60,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.account_balance, size: 28),
+                      SizedBox(height: 4),
+                      Text('Budgets', style: TextStyle(fontSize: 11)),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            dividerColor: Colors.transparent,
-            tabs: [
-              Tab(
-                height: 60,
-                icon: Icon(Icons.account_balance_wallet, size: 26),
-                text: 'Portfolio',
-              ),
-              Tab(
-                height: 60,
-                icon: Icon(Icons.show_chart, size: 26),
-                text: 'Tracker',
-              ),
-              Tab(
-                height: 60,
-                icon: Icon(Icons.add_circle, size: 30),
-                text: 'Add',
-              ),
-              Tab(
-                height: 60,
-                icon: Icon(Icons.flag, size: 26),
-                text: 'Goals',
-              ),
-              Tab(
-                height: 60,
-                icon: Icon(Icons.account_balance, size: 26),
-                text: 'Budgets',
-              ),
-            ],
           ),
         ),
       ),
