@@ -29,21 +29,61 @@ class TabbedDashboardPage extends StatelessWidget {
             onTap: () {
               Navigator.of(context).pushReplacementNamed('/');
             },
-            child: const Text('Trackfolio'),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.trending_up,
+                  color: Colors.green[600],
+                  size: 28,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Trackfolio',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                    color: Colors.black,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
           ),
+          centerTitle: true,
           automaticallyImplyLeading: false,
           actions: [
             Builder(
               builder: (context) => IconButton(
-                icon: const Icon(Icons.menu),
+                icon: const Icon(Icons.account_circle),
                 onPressed: () {
                   Scaffold.of(context).openEndDrawer();
                 },
               ),
             ),
           ],
-          bottom: const TabBar(
-            isScrollable: false,
+        ),
+        endDrawer: _ProfileDrawer(),
+        body: const TabBarView(
+          children: [
+            PortfolioTab(),
+            ShareTrackerTab(),
+            GoalsTab(),
+            BudgetsTab(),
+          ],
+        ),
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: const TabBar(
             tabs: [
               Tab(
                 icon: Icon(Icons.account_balance_wallet),
@@ -63,15 +103,6 @@ class TabbedDashboardPage extends StatelessWidget {
               ),
             ],
           ),
-        ),
-        endDrawer: _ProfileDrawer(),
-        body: const TabBarView(
-          children: [
-            PortfolioTab(),
-            ShareTrackerTab(),
-            GoalsTab(),
-            BudgetsTab(),
-          ],
         ),
       ),
     );
