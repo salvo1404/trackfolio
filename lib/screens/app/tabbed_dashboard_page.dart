@@ -75,7 +75,7 @@ class TabbedDashboardPage extends StatelessWidget {
           ],
         ),
         bottomNavigationBar: Container(
-          padding: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
           ),
@@ -85,6 +85,9 @@ class TabbedDashboardPage extends StatelessWidget {
             labelColor: Theme.of(context).colorScheme.primary,
             unselectedLabelColor: Colors.grey,
             indicatorSize: TabBarIndicatorSize.tab,
+            labelPadding: EdgeInsets.zero,
+            padding: EdgeInsets.zero,
+            overlayColor: WidgetStateProperty.all(Colors.transparent),
             indicator: BoxDecoration(
               border: Border(
                 top: BorderSide(
@@ -94,25 +97,30 @@ class TabbedDashboardPage extends StatelessWidget {
               ),
             ),
             dividerColor: Colors.transparent,
-            tabs: const [
+            tabs: [
               Tab(
-                icon: Icon(Icons.account_balance_wallet, size: 22),
+                height: 60,
+                icon: Icon(Icons.account_balance_wallet, size: 26),
                 text: 'Portfolio',
               ),
               Tab(
-                icon: Icon(Icons.show_chart, size: 22),
+                height: 60,
+                icon: Icon(Icons.show_chart, size: 26),
                 text: 'Tracker',
               ),
               Tab(
-                icon: Icon(Icons.add_circle, size: 26),
+                height: 60,
+                icon: Icon(Icons.add_circle, size: 30),
                 text: 'Add',
               ),
               Tab(
-                icon: Icon(Icons.flag, size: 22),
+                height: 60,
+                icon: Icon(Icons.flag, size: 26),
                 text: 'Goals',
               ),
               Tab(
-                icon: Icon(Icons.account_balance, size: 22),
+                height: 60,
+                icon: Icon(Icons.account_balance, size: 26),
                 text: 'Budgets',
               ),
             ],
