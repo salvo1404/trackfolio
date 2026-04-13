@@ -73,32 +73,32 @@ class TabbedDashboardPage extends StatelessWidget {
           ],
         ),
         bottomNavigationBar: Container(
+          padding: const EdgeInsets.only(top: 8, bottom: 12),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 4,
-                offset: const Offset(0, -2),
-              ),
-            ],
           ),
-          child: const TabBar(
-            tabs: [
+          child: TabBar(
+            labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+            labelColor: Theme.of(context).colorScheme.primary,
+            unselectedLabelColor: Colors.grey,
+            indicator: const BoxDecoration(),
+            dividerColor: Colors.transparent,
+            tabs: const [
               Tab(
-                icon: Icon(Icons.account_balance_wallet),
+                icon: Icon(Icons.account_balance_wallet, size: 22),
                 text: 'Portfolio',
               ),
               Tab(
-                icon: Icon(Icons.show_chart),
+                icon: Icon(Icons.show_chart, size: 22),
                 text: 'Tracker',
               ),
               Tab(
-                icon: Icon(Icons.flag),
+                icon: Icon(Icons.flag, size: 22),
                 text: 'Goals',
               ),
               Tab(
-                icon: Icon(Icons.account_balance),
+                icon: Icon(Icons.account_balance, size: 22),
                 text: 'Budgets',
               ),
             ],
