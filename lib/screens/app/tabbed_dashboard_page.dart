@@ -73,7 +73,7 @@ class TabbedDashboardPage extends StatelessWidget {
           ],
         ),
         bottomNavigationBar: Container(
-          padding: const EdgeInsets.only(top: 8, bottom: 12),
+          padding: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
           ),
@@ -82,7 +82,15 @@ class TabbedDashboardPage extends StatelessWidget {
             unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
             labelColor: Theme.of(context).colorScheme.primary,
             unselectedLabelColor: Colors.grey,
-            indicator: const BoxDecoration(),
+            indicatorSize: TabBarIndicatorSize.tab,
+            indicator: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 3,
+                ),
+              ),
+            ),
             dividerColor: Colors.transparent,
             tabs: const [
               Tab(
