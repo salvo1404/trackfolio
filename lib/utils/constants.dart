@@ -17,6 +17,7 @@ class AppConstants {
   static const String transactionsKey = 'transactions';
   static const String goalsKey = 'goals';
   static const String shareTransactionsKey = 'share_transactions';
+  static const String themeKey = 'is_dark_mode';
 
   // Portfolio Types
   static const String typeShares = 'Shares';

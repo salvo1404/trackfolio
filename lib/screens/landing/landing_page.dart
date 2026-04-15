@@ -41,7 +41,7 @@ class LandingPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -300,7 +300,7 @@ class LandingPage extends StatelessWidget {
   Widget _buildFeaturesSection(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(60),
-      color: Colors.grey[50],
+      color: Theme.of(context).colorScheme.surfaceContainerLowest,
       child: Column(
         children: [
           Text(

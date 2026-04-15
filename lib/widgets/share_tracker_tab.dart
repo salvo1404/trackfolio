@@ -720,13 +720,13 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                         )
                       : null,
               filled: true,
-              fillColor: Colors.grey[50],
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -776,13 +776,13 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                 color: Theme.of(context).colorScheme.primary,
               ),
               filled: true,
-              fillColor: Colors.grey[50],
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -820,13 +820,13 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                 color: Theme.of(context).colorScheme.primary,
               ),
               filled: true,
-              fillColor: Colors.grey[50],
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -866,13 +866,13 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                 color: Theme.of(context).colorScheme.primary,
               ),
               filled: true,
-              fillColor: Colors.grey[50],
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -918,8 +918,8 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               decoration: BoxDecoration(
-                color: Colors.grey[50],
-                border: Border.all(color: Colors.grey[300]!),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                border: Border.all(color: Theme.of(context).colorScheme.outline),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -1015,13 +1015,13 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                 color: Theme.of(context).colorScheme.primary,
               ),
               filled: true,
-              fillColor: Colors.grey[50],
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1064,13 +1064,13 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                 color: Theme.of(context).colorScheme.primary,
               ),
               filled: true,
-              fillColor: Colors.grey[50],
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1108,13 +1108,13 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                 color: Theme.of(context).colorScheme.primary,
               ),
               filled: true,
-              fillColor: Colors.grey[50],
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1159,8 +1159,8 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               decoration: BoxDecoration(
-                color: Colors.grey[50],
-                border: Border.all(color: Colors.grey[300]!),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                border: Border.all(color: Theme.of(context).colorScheme.outline),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -1205,13 +1205,13 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                 color: Theme.of(context).colorScheme.primary,
               ),
               filled: true,
-              fillColor: Colors.grey[50],
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1254,13 +1254,13 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                 color: Theme.of(context).colorScheme.primary,
               ),
               filled: true,
-              fillColor: Colors.grey[50],
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1298,13 +1298,13 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                 color: Theme.of(context).colorScheme.primary,
               ),
               filled: true,
-              fillColor: Colors.grey[50],
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1343,13 +1343,13 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                 color: Theme.of(context).colorScheme.primary,
               ),
               filled: true,
-              fillColor: Colors.grey[50],
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1388,13 +1388,13 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                 color: Theme.of(context).colorScheme.primary,
               ),
               filled: true,
-              fillColor: Colors.grey[50],
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1528,13 +1528,13 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                             color: Theme.of(context).colorScheme.primary,
                           ),
                           filled: true,
-                          fillColor: Colors.grey[50],
+                          fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
+                            borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -1580,13 +1580,13 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                             color: Theme.of(context).colorScheme.primary,
                           ),
                           filled: true,
-                          fillColor: Colors.grey[50],
+                          fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
+                            borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -1623,7 +1623,7 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                   // Divider
                   Row(
                     children: [
-                      Expanded(child: Divider(color: Colors.grey[300])),
+                      Expanded(child: Divider(color: Theme.of(context).dividerColor)),
                       if (widget.item != null) ...[
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1636,7 +1636,7 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                             ),
                           ),
                         ),
-                        Expanded(child: Divider(color: Colors.grey[300])),
+                        Expanded(child: Divider(color: Theme.of(context).dividerColor)),
                       ],
                     ],
                   ),
@@ -1733,9 +1733,9 @@ class _DetailItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
+import '../../services/theme_service.dart';
 import '../../services/portfolio_service.dart';
 import '../../widgets/portfolio_tab.dart';
 import '../../widgets/goals_tab.dart';
@@ -39,12 +40,12 @@ class TabbedDashboardPage extends StatelessWidget {
                   size: 28,
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Trackfolio',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 22,
-                    color: Colors.black,
+                    color: Theme.of(context).colorScheme.onSurface,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -295,7 +296,7 @@ class _ProfileDrawerState extends State<_ProfileDrawer> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     filled: true,
-                    fillColor: Colors.grey[50],
+                    fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                   ),
                   hint: const Text('Select country'),
                   items: _countries
@@ -352,7 +353,7 @@ class _ProfileDrawerState extends State<_ProfileDrawer> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     filled: true,
-                    fillColor: Colors.grey[50],
+                    fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                   ),
                   items: _currencies
                       .map((currency) => DropdownMenuItem(
@@ -370,6 +371,20 @@ class _ProfileDrawerState extends State<_ProfileDrawer> {
             ),
           ),
 
+          const Divider(),
+          Builder(
+            builder: (context) {
+              final themeService = context.watch<ThemeService>();
+              return SwitchListTile(
+                secondary: Icon(
+                  themeService.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                ),
+                title: const Text('Dark Mode'),
+                value: themeService.isDarkMode,
+                onChanged: (_) => themeService.toggleTheme(),
+              );
+            },
+          ),
           const Divider(),
           const SizedBox(height: 8),
           ListTile(

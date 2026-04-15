@@ -151,7 +151,7 @@ class GoalsTab extends StatelessWidget {
                             ),
                             Chip(
                               label: Text(goal.category),
-                              backgroundColor: Colors.grey[200],
+                              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                             ),
                           ],
                         ),
@@ -221,7 +221,7 @@ class GoalsTab extends StatelessWidget {
                         const SizedBox(height: 12),
                         LinearProgressIndicator(
                           value: (goal.progress / 100).clamp(0.0, 1.0),
-                          backgroundColor: Colors.grey[200],
+                          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                           valueColor: AlwaysStoppedAnimation(
                             goal.isCompleted
                                 ? AppTheme.successColor

@@ -167,7 +167,7 @@ class DashboardPage extends StatelessWidget {
                             const SizedBox(height: 8),
                             LinearProgressIndicator(
                               value: budget.percentUsed / 100,
-                              backgroundColor: Colors.grey[200],
+                              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                               valueColor: AlwaysStoppedAnimation(
                                 budget.isOverBudget
                                     ? AppTheme.errorColor

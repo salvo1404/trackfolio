@@ -148,7 +148,7 @@ class BudgetsTab extends StatelessWidget {
                               ),
                               Chip(
                                 label: Text(budget.period),
-                                backgroundColor: Colors.grey[200],
+                                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                               ),
                             ],
                           ),
@@ -224,7 +224,7 @@ class BudgetsTab extends StatelessWidget {
                           const SizedBox(height: 12),
                           LinearProgressIndicator(
                             value: (budget.percentUsed / 100).clamp(0.0, 1.0),
-                            backgroundColor: Colors.grey[200],
+                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                             valueColor: AlwaysStoppedAnimation(
                               budget.isOverBudget
                                   ? AppTheme.errorColor

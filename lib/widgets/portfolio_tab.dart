@@ -806,7 +806,7 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
             child: _isExpanded
                 ? Column(
                     children: [
-                      Divider(height: 1, color: Colors.grey[300]),
+                      Divider(height: 1, color: Theme.of(context).dividerColor),
                       ...widget.items.map((item) {
                         final itemValueUSD = widget.currencyService.convertBetween(
                           item.totalValue,

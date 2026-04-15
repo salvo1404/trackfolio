@@ -178,7 +178,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.grey[300]!),
+                                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -220,7 +220,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.grey[300]!),
+                                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -276,7 +276,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.grey[300]!),
+                                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -332,7 +332,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.grey[300]!),
+                                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -396,7 +396,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           // Divider
                           Row(
                             children: [
-                              Expanded(child: Divider(color: Colors.grey[300])),
+                              Expanded(child: Divider(color: Theme.of(context).dividerColor)),
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 16),
                                 child: Text(
@@ -407,7 +407,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ),
                                 ),
                               ),
-                              Expanded(child: Divider(color: Colors.grey[300])),
+                              Expanded(child: Divider(color: Theme.of(context).dividerColor)),
                             ],
                           ),
                           const SizedBox(height: 24),

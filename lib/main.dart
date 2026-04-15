@@ -4,6 +4,7 @@ import 'services/storage_service.dart';
 import 'services/auth_service.dart';
 import 'services/portfolio_service.dart';
 import 'services/currency_service.dart';
+import 'services/theme_service.dart';
 import 'screens/landing/landing_page.dart';
 import 'screens/auth/login_page.dart';
 import 'screens/auth/register_page.dart';
@@ -37,17 +38,22 @@ class TrackfolioApp extends StatelessWidget {
           create: (_) => AuthService(storage),
         ),
         ChangeNotifierProvider(
+          create: (_) => ThemeService(storage),
+        ),
+        ChangeNotifierProvider(
           create: (context) => PortfolioService(
             storage,
             context.read<CurrencyService>(),
           ),
         ),
       ],
-      child: Consumer<AuthService>(
-        builder: (context, authService, _) {
+      child: Consumer2<AuthService, ThemeService>(
+        builder: (context, authService, themeService, _) {
           return MaterialApp(
             title: 'Trackfolio',
             theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeService.themeMode,
             debugShowCheckedModeBanner: false,
             initialRoute: authService.isLoggedIn ? '/dashboard' : '/',
             routes: {
