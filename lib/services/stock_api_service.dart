@@ -7,12 +7,12 @@ class StockApiService {
   static const String _apiKey = 'FXHX7WL780IL2WWG'; // Replace with your actual API key
   static const String _baseUrl = 'https://www.alphavantage.co/query';
 
-  /// Lookup stock by symbol and get current price
-  /// Returns a map with 'symbol', 'name', and 'price' if successful
-  /// Returns null if the symbol is not found or there's an error
+  /// Lookup stock/ETF by symbol and get current price.
+  /// Supports international symbols like VUAA.LON, DHER.DEX, etc.
+  /// Returns a map with 'symbol', 'name', and 'price' if successful.
+  /// Returns null if the symbol is not found or there's an error.
   Future<Map<String, dynamic>?> lookupStock(String symbol) async {
     try {
-      // Alpha Vantage GLOBAL_QUOTE endpoint
       final uri = Uri.parse(
         '$_baseUrl?function=GLOBAL_QUOTE&symbol=$symbol&apikey=$_apiKey',
       );
@@ -27,11 +27,9 @@ class StockApiService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        // Check if we got valid data
         if (data.containsKey('Global Quote')) {
           final quote = data['Global Quote'] as Map<String, dynamic>;
 
-          // Alpha Vantage returns empty object if symbol not found
           if (quote.isEmpty) {
             return null;
           }
@@ -48,7 +46,6 @@ class StockApiService {
           }
         }
 
-        // Check for API error messages
         if (data.containsKey('Note') || data.containsKey('Error Message')) {
           throw Exception(data['Note'] ?? data['Error Message']);
         }
@@ -56,14 +53,14 @@ class StockApiService {
 
       return null;
     } catch (e) {
-      // Log error but don't crash the app
       print('Error fetching stock data: $e');
       return null;
     }
   }
 
-  /// Search for stock symbols by keyword
-  /// This can be used for autocomplete functionality
+  /// Search for stock/ETF symbols by keyword.
+  /// Returns matches with symbol, name, type, region, and currency.
+  /// Supports ETFs, equities, and international exchanges.
   Future<List<Map<String, String>>> searchSymbols(String keyword) async {
     try {
       final uri = Uri.parse(
@@ -83,7 +80,9 @@ class StockApiService {
             return {
               'symbol': match['1. symbol']?.toString() ?? '',
               'name': match['2. name']?.toString() ?? '',
+              'type': match['3. type']?.toString() ?? '',
               'region': match['4. region']?.toString() ?? '',
+              'currency': match['8. currency']?.toString() ?? '',
             };
           }).toList();
         }

@@ -536,6 +536,9 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
   double? _suggestedPrice;
   bool _isLoadingPrice = false;
   String? _symbolLookupMessage;
+  List<Map<String, String>> _searchResults = [];
+  bool _isSearching = false;
+  bool _showSearchResults = false;
 
   final List<String> _currencies = [
     'USD', 'EUR', 'GBP', 'JPY', 'CNY', 'INR',
@@ -577,24 +580,72 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
     return quantity * price;
   }
 
-  Future<void> _lookupStockSymbol(String symbol) async {
-    if (symbol.isEmpty) {
+  Future<void> _searchSymbols(String keyword) async {
+    if (keyword.isEmpty) {
       setState(() {
+        _searchResults = [];
+        _isSearching = false;
+        _showSearchResults = false;
         _suggestedPrice = null;
-        _isLoadingPrice = false;
         _symbolLookupMessage = null;
       });
       return;
     }
 
     setState(() {
-      _isLoadingPrice = true;
+      _isSearching = true;
       _suggestedPrice = null;
       _symbolLookupMessage = null;
     });
 
     try {
-      // Fetch real stock data from Alpha Vantage API
+      final results = await _stockApiService.searchSymbols(keyword);
+
+      if (!mounted) return;
+
+      setState(() {
+        _searchResults = results;
+        _isSearching = false;
+        _showSearchResults = results.isNotEmpty;
+        if (results.isEmpty) {
+          _symbolLookupMessage = 'No results found. Try a different keyword.';
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+        _showSearchResults = false;
+        _symbolLookupMessage = 'Error searching. Please try again.';
+      });
+    }
+  }
+
+  Future<void> _selectSymbol(Map<String, String> match) async {
+    final symbol = match['symbol'] ?? '';
+    final name = match['name'] ?? symbol;
+    final currency = match['currency'] ?? '';
+
+    setState(() {
+      _symbolController.text = symbol;
+      _showSearchResults = false;
+      _searchResults = [];
+      _isLoadingPrice = true;
+      _symbolLookupMessage = null;
+
+      if (_nameController.text.isEmpty) {
+        _nameController.text = name;
+      }
+
+      // Auto-set currency if it matches a supported one
+      if (currency.isNotEmpty && _currencies.contains(currency)) {
+        _currency = currency;
+      }
+    });
+
+    try {
       final stockData = await _stockApiService.lookupStock(symbol);
 
       if (!mounted) return;
@@ -603,19 +654,10 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
         if (stockData != null && stockData['price'] != null) {
           _suggestedPrice = stockData['price'] as double;
           _currentValueController.text = _suggestedPrice!.toStringAsFixed(2);
-
-          final symbolName = stockData['symbol'] as String;
-          final name = stockData['name'] ?? symbolName;
-
-          _symbolLookupMessage = '✓ $name - \$${_suggestedPrice!.toStringAsFixed(2)}';
-
-          // Auto-fill company name if the name field is empty
-          if (_nameController.text.isEmpty && stockData['name'] != null) {
-            _nameController.text = stockData['name'] as String;
-          }
+          _symbolLookupMessage = '$name - ${_suggestedPrice!.toStringAsFixed(2)} $currency';
         } else {
           _suggestedPrice = null;
-          _symbolLookupMessage = 'Symbol not found. Please verify and enter manually.';
+          _symbolLookupMessage = '$name selected. Enter current value manually.';
         }
         _isLoadingPrice = false;
       });
@@ -624,7 +666,7 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
 
       setState(() {
         _suggestedPrice = null;
-        _symbolLookupMessage = 'Error fetching data. Please try again or enter manually.';
+        _symbolLookupMessage = '$name selected. Enter current value manually.';
         _isLoadingPrice = false;
       });
     }
@@ -686,9 +728,9 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
           TextFormField(
             controller: _symbolController,
             decoration: InputDecoration(
-              hintText: 'e.g., AAPL, GOOGL',
+              hintText: 'Search by name or symbol (e.g. AAPL, VUAA)',
               helperText: _isLoadingPrice
-                  ? 'Looking up symbol...'
+                  ? 'Fetching price...'
                   : _symbolLookupMessage,
               helperStyle: TextStyle(
                 color: _suggestedPrice != null
@@ -703,7 +745,7 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
                 Icons.search,
                 color: Theme.of(context).colorScheme.primary,
               ),
-              suffixIcon: _isLoadingPrice
+              suffixIcon: _isSearching || _isLoadingPrice
                   ? const Padding(
                       padding: EdgeInsets.all(12),
                       child: SizedBox(
@@ -738,10 +780,12 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
             ),
             textCapitalization: TextCapitalization.characters,
             onChanged: (value) {
-              if (value.length >= 3) {
-                _lookupStockSymbol(value);
+              if (value.length >= 2) {
+                _searchSymbols(value);
               } else {
                 setState(() {
+                  _searchResults = [];
+                  _showSearchResults = false;
                   _suggestedPrice = null;
                   _symbolLookupMessage = null;
                   _isLoadingPrice = false;
@@ -750,6 +794,61 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
             },
             validator: (v) => v?.isEmpty == true ? 'Required' : null,
           ),
+          if (_showSearchResults && _searchResults.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              constraints: const BoxConstraints(maxHeight: 200),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Theme.of(context).colorScheme.outline),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: _searchResults.length,
+                separatorBuilder: (_, __) => Divider(
+                  height: 1,
+                  color: Theme.of(context).dividerColor,
+                ),
+                itemBuilder: (context, index) {
+                  final match = _searchResults[index];
+                  final typeLabel = match['type'] == 'ETF' ? 'ETF' : 'Stock';
+                  return ListTile(
+                    dense: true,
+                    visualDensity: VisualDensity.compact,
+                    title: Text(
+                      '${match['symbol']}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '${match['name']}',
+                      style: const TextStyle(fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: Text(
+                      '$typeLabel  ${match['region']}  ${match['currency']}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    onTap: () => _selectSymbol(match),
+                  );
+                },
+              ),
+            ),
         ],
       ),
       const SizedBox(height: 20),
