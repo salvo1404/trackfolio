@@ -102,13 +102,16 @@ class TabbedDashboardPage extends StatelessWidget {
               tabs: [
                 Tab(
                   height: 60,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.account_balance_wallet, size: 26),
-                      SizedBox(height: 4),
-                      Text('Portfolio', style: TextStyle(fontSize: 11)),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.account_balance_wallet, size: 26),
+                        SizedBox(height: 4),
+                        Text('Portfolio', style: TextStyle(fontSize: 11)),
+                      ],
+                    ),
                   ),
                 ),
                 Tab(
@@ -146,13 +149,16 @@ class TabbedDashboardPage extends StatelessWidget {
                 ),
                 Tab(
                   height: 60,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.account_balance, size: 26),
-                      SizedBox(height: 4),
-                      Text('Budgets', style: TextStyle(fontSize: 11)),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.account_balance, size: 26),
+                        SizedBox(height: 4),
+                        Text('Budgets', style: TextStyle(fontSize: 11)),
+                      ],
+                    ),
                   ),
                 ),
               ],
