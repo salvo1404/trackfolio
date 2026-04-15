@@ -651,96 +651,251 @@ class PortfolioTab extends StatelessWidget {
       final items = data['items'] as List<PortfolioItem>;
       final totalValue = data['totalValue'] as double;
       final totalCost = data['totalCost'] as double;
-      final totalGainLoss = totalValue - totalCost;
-      final gainLossColor = totalGainLoss >= 0
-          ? AppTheme.successColor
-          : AppTheme.errorColor;
 
       widgets.add(
-        Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: 3,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: AppTheme.getPortfolioTypeColor(
-                      type,
-                    ).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    _getIconForType(type),
-                    color: AppTheme.getPortfolioTypeColor(type),
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        type,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${items.length} ${items.length == 1 ? 'item' : 'items'}',
-                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      currencyFormatter.format(totalValue),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: gainLossColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '${totalGainLoss >= 0 ? '+' : ''}${currencyFormatter.format(totalGainLoss)}',
-                        style: TextStyle(
-                          color: gainLossColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+        _ExpandableTypeCard(
+          type: type,
+          items: items,
+          totalValue: totalValue,
+          totalCost: totalCost,
+          currencyFormatter: currencyFormatter,
+          currencyService: currencyService,
+          icon: _getIconForType(type),
         ),
       );
     }
 
     return widgets;
+  }
+}
+
+class _ExpandableTypeCard extends StatefulWidget {
+  final String type;
+  final List<PortfolioItem> items;
+  final double totalValue;
+  final double totalCost;
+  final CurrencyFormatter currencyFormatter;
+  final CurrencyService currencyService;
+  final IconData icon;
+
+  const _ExpandableTypeCard({
+    required this.type,
+    required this.items,
+    required this.totalValue,
+    required this.totalCost,
+    required this.currencyFormatter,
+    required this.currencyService,
+    required this.icon,
+  });
+
+  @override
+  State<_ExpandableTypeCard> createState() => _ExpandableTypeCardState();
+}
+
+class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final totalGainLoss = widget.totalValue - widget.totalCost;
+    final gainLossColor = totalGainLoss >= 0
+        ? AppTheme.successColor
+        : AppTheme.errorColor;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: AppTheme.getPortfolioTypeColor(
+                        widget.type,
+                      ).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      widget.icon,
+                      color: AppTheme.getPortfolioTypeColor(widget.type),
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.type,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${widget.items.length} ${widget.items.length == 1 ? 'item' : 'items'}',
+                          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        widget.currencyFormatter.format(widget.totalValue),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: gainLossColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '${totalGainLoss >= 0 ? '+' : ''}${widget.currencyFormatter.format(totalGainLoss)}',
+                          style: TextStyle(
+                            color: gainLossColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 8),
+                  AnimatedRotation(
+                    turns: _isExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.expand_more,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            child: _isExpanded
+                ? Column(
+                    children: [
+                      Divider(height: 1, color: Colors.grey[300]),
+                      ...widget.items.map((item) {
+                        final itemValueUSD = widget.currencyService.convertBetween(
+                          item.totalValue,
+                          item.currency,
+                          'USD',
+                        );
+                        final itemCostUSD = widget.currencyService.convertBetween(
+                          item.totalCost,
+                          item.currency,
+                          'USD',
+                        );
+                        final itemGainLoss = itemValueUSD - itemCostUSD;
+                        final itemGainLossColor = itemGainLoss >= 0
+                            ? AppTheme.successColor
+                            : AppTheme.errorColor;
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 72),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.name,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Qty: ${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    widget.currencyFormatter.format(itemValueUSD),
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 1,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: itemGainLossColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      '${itemGainLoss >= 0 ? '+' : ''}${widget.currencyFormatter.format(itemGainLoss)}',
+                                      style: TextStyle(
+                                        color: itemGainLossColor,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 4),
+                    ],
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
   }
 }
 

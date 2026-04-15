@@ -104,7 +104,7 @@ class TabbedDashboardPage extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: const [
-                      Icon(Icons.account_balance_wallet, size: 28),
+                      Icon(Icons.account_balance_wallet, size: 26),
                       SizedBox(height: 4),
                       Text('Portfolio', style: TextStyle(fontSize: 11)),
                     ],
@@ -115,7 +115,7 @@ class TabbedDashboardPage extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: const [
-                      Icon(Icons.show_chart, size: 28),
+                      Icon(Icons.show_chart, size: 26),
                       SizedBox(height: 4),
                       Text('Tracker', style: TextStyle(fontSize: 11)),
                     ],
@@ -126,7 +126,7 @@ class TabbedDashboardPage extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: const [
-                      Icon(Icons.add_circle, size: 32),
+                      Icon(Icons.add_circle, size: 30),
                       SizedBox(height: 4),
                       Text('Add', style: TextStyle(fontSize: 11)),
                     ],
@@ -137,7 +137,7 @@ class TabbedDashboardPage extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: const [
-                      Icon(Icons.flag, size: 28),
+                      Icon(Icons.flag, size: 26),
                       SizedBox(height: 4),
                       Text('Goals', style: TextStyle(fontSize: 11)),
                     ],
@@ -148,7 +148,7 @@ class TabbedDashboardPage extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: const [
-                      Icon(Icons.account_balance, size: 28),
+                      Icon(Icons.account_balance, size: 26),
                       SizedBox(height: 4),
                       Text('Budgets', style: TextStyle(fontSize: 11)),
                     ],
