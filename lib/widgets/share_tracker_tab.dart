@@ -249,17 +249,19 @@ class ShareTrackerTab extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              Text(
-                                item.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
+                              Flexible(
+                                child: Text(
+                                  item.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
@@ -285,7 +287,54 @@ class ShareTrackerTab extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
+
+                    // Gain/Loss section
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: gainLossColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: gainLossColor.withOpacity(0.3),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                item.gainLoss >= 0
+                                    ? Icons.trending_up
+                                    : Icons.trending_down,
+                                color: gainLossColor,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Gain/Loss',
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            '${item.gainLoss >= 0 ? '+' : ''}${formatInItemCurrency(item.gainLoss)} (${item.gainLossPercent.toStringAsFixed(1)}%)',
+                            style: TextStyle(
+                              color: gainLossColor,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
 
                     // Details grid - responsive layout
                     LayoutBuilder(
@@ -420,51 +469,6 @@ class ShareTrackerTab extends StatelessWidget {
                       },
                     ),
 
-                    // Gain/Loss section
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: gainLossColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: gainLossColor.withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                item.gainLoss >= 0
-                                    ? Icons.trending_up
-                                    : Icons.trending_down,
-                                color: gainLossColor,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Gain/Loss',
-                                style: TextStyle(
-                                  color: Colors.grey[700],
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            '${item.gainLoss >= 0 ? '+' : ''}${formatInItemCurrency(item.gainLoss)} (${item.gainLossPercent.toStringAsFixed(1)}%)',
-                            style: TextStyle(
-                              color: gainLossColor,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -501,28 +505,28 @@ class ShareTrackerTab extends StatelessWidget {
   void _showAddItemDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => const _PortfolioItemDialog(),
+      builder: (context) => const PortfolioItemDialog(),
     );
   }
 
   void _showEditItemDialog(BuildContext context, PortfolioItem item) {
     showDialog(
       context: context,
-      builder: (context) => _PortfolioItemDialog(item: item),
+      builder: (context) => PortfolioItemDialog(item: item),
     );
   }
 }
 
-class _PortfolioItemDialog extends StatefulWidget {
+class PortfolioItemDialog extends StatefulWidget {
   final PortfolioItem? item;
 
-  const _PortfolioItemDialog({this.item});
+  const PortfolioItemDialog({super.key, this.item});
 
   @override
-  State<_PortfolioItemDialog> createState() => _PortfolioItemDialogState();
+  State<PortfolioItemDialog> createState() => _PortfolioItemDialogState();
 }
 
-class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
+class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
   final _formKey = GlobalKey<FormState>();
   final _stockApiService = StockApiService();
   late String _type;
