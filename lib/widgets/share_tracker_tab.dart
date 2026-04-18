@@ -11,8 +11,15 @@ import '../utils/theme.dart';
 import '../utils/constants.dart';
 import '../utils/currency_formatter.dart';
 
-class ShareTrackerTab extends StatelessWidget {
+class ShareTrackerTab extends StatefulWidget {
   const ShareTrackerTab({super.key});
+
+  @override
+  State<ShareTrackerTab> createState() => _ShareTrackerTabState();
+}
+
+class _ShareTrackerTabState extends State<ShareTrackerTab> {
+  final Set<String> _collapsedTypes = {};
 
   @override
   Widget build(BuildContext context) {
@@ -169,318 +176,270 @@ class ShareTrackerTab extends StatelessWidget {
       final items = data['items'] as List<PortfolioItem>;
       final totalValue = data['totalValue'] as double;
 
-      // Category header
+      final isCollapsed = _collapsedTypes.contains(type);
+
+      // Category header (tappable to collapse/expand)
       widgets.add(
-        Padding(
-          padding: const EdgeInsets.only(top: 8, bottom: 12),
-          child: Row(
-            children: [
-              Container(
-                width: 4,
-                height: 24,
-                decoration: BoxDecoration(
+        InkWell(
+          onTap: () {
+            setState(() {
+              if (isCollapsed) {
+                _collapsedTypes.remove(type);
+              } else {
+                _collapsedTypes.add(type);
+              }
+            });
+          },
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: AppTheme.getPortfolioTypeColor(type),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Icon(
+                  _getIconForType(type),
                   color: AppTheme.getPortfolioTypeColor(type),
-                  borderRadius: BorderRadius.circular(2),
+                  size: 20,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Icon(
-                _getIconForType(type),
-                color: AppTheme.getPortfolioTypeColor(type),
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                type,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(width: 8),
+                Text(
+                  type,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const Spacer(),
-              Text(
-                currencyFormatter.format(totalValue),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[700],
+                const SizedBox(width: 8),
+                Icon(
+                  isCollapsed ? Icons.expand_more : Icons.expand_less,
+                  color: Colors.grey[600],
+                  size: 20,
                 ),
-              ),
-            ],
+                const Spacer(),
+                Text(
+                  currencyFormatter.format(totalValue),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
 
-      // Items in this category
-      for (final item in items) {
-        // Format values in the item's original currency
-        final itemCurrencySymbol = currencyService.getSymbol(item.currency);
-        final decimalDigits = item.currency == 'JPY' ? 0 : 2;
+      // Items in this category (hidden when collapsed)
+      if (!isCollapsed) {
+        final isStockOrCrypto = type == AppConstants.typeStocksAndETFs ||
+            type == AppConstants.typeCrypto;
 
-        String formatInItemCurrency(double value) {
-          final formatter = NumberFormat.currency(
-            symbol: itemCurrencySymbol,
-            decimalDigits: decimalDigits,
-          );
-          return formatter.format(value);
-        }
+        for (final item in items) {
+          final gainLossColor = item.gainLoss >= 0
+              ? AppTheme.successColor
+              : AppTheme.errorColor;
 
-        final gainLossColor = item.gainLoss >= 0
-            ? AppTheme.successColor
-            : AppTheme.errorColor;
+          widgets.add(
+            Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _showEditItemDialog(context, item),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Builder(
+                    builder: (context) {
+                      final sym = currencyService.getSymbol(item.currency);
+                      final dec = item.currency == 'JPY' ? 0 : 2;
+                      String fmt(double v) => NumberFormat.currency(symbol: sym, decimalDigits: dec).format(v);
 
-        widgets.add(
-          Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            elevation: 3,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => _showEditItemDialog(context, item),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header with name and edit icon
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  item.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  item.currency,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.edit_outlined,
-                          color: Colors.grey[400],
-                          size: 20,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Gain/Loss section
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: gainLossColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: gainLossColor.withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Header: Name (+ symbol) + currency badge + edit icon
                           Row(
                             children: [
-                              Icon(
-                                item.gainLoss >= 0
-                                    ? Icons.trending_up
-                                    : Icons.trending_down,
-                                color: gainLossColor,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Gain/Loss',
-                                style: TextStyle(
-                                  color: Colors.grey[700],
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text.rich(
+                                        TextSpan(
+                                          children: [
+                                            TextSpan(
+                                              text: item.name,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            if (item.symbol != null && item.symbol!.isNotEmpty)
+                                              TextSpan(
+                                                text: '  ${item.symbol}',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.grey[500],
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        item.currency,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Theme.of(context).colorScheme.primary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
+                              Icon(
+                                Icons.edit_outlined,
+                                color: Colors.grey[400],
+                                size: 18,
+                              ),
                             ],
                           ),
-                          Text(
-                            '${item.gainLoss >= 0 ? '+' : ''}${formatInItemCurrency(item.gainLoss)} (${item.gainLossPercent.toStringAsFixed(1)}%)',
-                            style: TextStyle(
-                              color: gainLossColor,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
+                          const SizedBox(height: 10),
+                          if (isStockOrCrypto) ...[
+                            // Row 1: Date, Qty, Price, Total Cost
+                            Row(
+                              children: [
+                                _detailChip('Date', DateFormat('MMM dd, yyyy').format(item.purchaseDate)),
+                                const SizedBox(width: 12),
+                                _detailChip('Qty', item.quantity.toStringAsFixed(2)),
+                                const SizedBox(width: 12),
+                                _detailChip('Price', fmt(item.purchasePrice)),
+                                const SizedBox(width: 12),
+                                _detailChip('Total Cost', fmt(item.totalCost)),
+                              ],
                             ),
-                          ),
+                            const SizedBox(height: 6),
+                            // Row 2: Date Sold, Fees, Current Value, Total Value
+                            Row(
+                              children: [
+                                _detailChip('Date Sold', item.dateSold != null
+                                    ? DateFormat('MMM dd, yyyy').format(item.dateSold!)
+                                    : '-'),
+                                const SizedBox(width: 12),
+                                _detailChip('Fees', fmt(item.fees ?? 0.0)),
+                                const SizedBox(width: 12),
+                                _detailChip('Current', fmt(item.currentValue)),
+                                const SizedBox(width: 12),
+                                _detailChipColored(
+                                  'Total Value',
+                                  fmt(item.totalValue),
+                                  gainLossColor,
+                                ),
+                              ],
+                            ),
+                          ] else ...[
+                            // Simplified layout for other types
+                            Row(
+                              children: [
+                                _detailChip('Date', DateFormat('MMM dd, yyyy').format(item.purchaseDate)),
+                                const SizedBox(width: 12),
+                                _detailChip('Cost', fmt(item.totalCost)),
+                                const SizedBox(width: 12),
+                                _detailChipColored(
+                                  'Total Value',
+                                  fmt(item.totalValue),
+                                  gainLossColor,
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Details grid - responsive layout
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isWideScreen = constraints.maxWidth > 800;
-
-                        if (isWideScreen) {
-                          // Wide screen: single row with all 6 fields
-                          return Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _DetailItem(
-                                      label: 'Quantity',
-                                      value: item.quantity.toStringAsFixed(2),
-                                      icon: Icons.numbers,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: _DetailItem(
-                                      label: 'Purchase Date',
-                                      value: DateFormat('MMM dd, yyyy').format(item.purchaseDate),
-                                      icon: Icons.calendar_today,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: _DetailItem(
-                                      label: 'Purchase Price',
-                                      value: formatInItemCurrency(item.purchasePrice),
-                                      icon: Icons.shopping_cart_outlined,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: _DetailItem(
-                                      label: 'Current Value',
-                                      value: formatInItemCurrency(item.currentValue),
-                                      icon: Icons.trending_up,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: _DetailItem(
-                                      label: 'Total Cost',
-                                      value: formatInItemCurrency(item.totalCost),
-                                      icon: Icons.calculate,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: _DetailItem(
-                                      label: 'Total Value',
-                                      value: formatInItemCurrency(item.totalValue),
-                                      icon: Icons.account_balance_wallet,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-                          );
-                        } else {
-                          // Narrow screen: 3 rows with 2 fields each
-                          return Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _DetailItem(
-                                      label: 'Quantity',
-                                      value: item.quantity.toStringAsFixed(2),
-                                      icon: Icons.numbers,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _DetailItem(
-                                      label: 'Purchase Date',
-                                      value: DateFormat('MMM dd, yyyy').format(item.purchaseDate),
-                                      icon: Icons.calendar_today,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _DetailItem(
-                                      label: 'Purchase Price',
-                                      value: formatInItemCurrency(item.purchasePrice),
-                                      icon: Icons.shopping_cart_outlined,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _DetailItem(
-                                      label: 'Current Value',
-                                      value: formatInItemCurrency(item.currentValue),
-                                      icon: Icons.trending_up,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _DetailItem(
-                                      label: 'Total Cost',
-                                      value: formatInItemCurrency(item.totalCost),
-                                      icon: Icons.calculate,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _DetailItem(
-                                      label: 'Total Value',
-                                      value: formatInItemCurrency(item.totalValue),
-                                      icon: Icons.account_balance_wallet,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-                          );
-                        }
-                      },
-                    ),
-
-                  ],
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
-          ),
-        );
+          );
+        }
       }
 
       widgets.add(const SizedBox(height: 8));
     }
 
     return widgets;
+  }
+
+  Widget _detailChip(String label, String value) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailChipColored(String label, String value, Color color) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
   }
 
   IconData _getIconForType(String type) {
@@ -538,6 +497,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
   late TextEditingController _currentValueController;
   late TextEditingController _feesController;
   late DateTime _purchaseDate;
+  DateTime? _dateSold;
   double? _suggestedPrice;
   bool _isLoadingPrice = false;
   String? _symbolLookupMessage;
@@ -556,7 +516,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
     _type = widget.item?.type ?? AppConstants.portfolioTypes.first;
     _currency = widget.item?.currency ?? 'USD';
     _nameController = TextEditingController(text: widget.item?.name ?? '');
-    _symbolController = TextEditingController(text: '');
+    _symbolController = TextEditingController(text: widget.item?.symbol ?? '');
     _quantityController = TextEditingController(
       text: widget.item?.quantity.toString() ?? '',
     );
@@ -570,6 +530,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
       text: (widget.item?.fees ?? 0.0).toString(),
     );
     _purchaseDate = widget.item?.purchaseDate ?? DateTime.now();
+    _dateSold = widget.item?.dateSold;
   }
 
   @override
@@ -705,6 +666,8 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
       lastUpdated: DateTime.now(),
       currency: _currency,
       fees: double.tryParse(_feesController.text) ?? 0.0,
+      symbol: _symbolController.text.isNotEmpty ? _symbolController.text : null,
+      dateSold: _dateSold,
     );
 
     if (widget.item == null) {
@@ -1046,6 +1009,73 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
                     DateFormat('MMM dd, yyyy').format(_purchaseDate),
                     style: const TextStyle(fontSize: 16),
                   ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+
+      // Date Sold (optional)
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Date Sold (optional)',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: () async {
+              final date = await showDatePicker(
+                context: context,
+                initialDate: _dateSold ?? DateTime.now(),
+                firstDate: DateTime(2000),
+                lastDate: DateTime.now(),
+              );
+              if (date != null) {
+                setState(() => _dateSold = date);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                border: Border.all(color: Theme.of(context).colorScheme.outline),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.event_available,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    _dateSold != null
+                        ? DateFormat('MMM dd, yyyy').format(_dateSold!)
+                        : 'Not sold',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: _dateSold != null ? null : Colors.grey[500],
+                    ),
+                  ),
+                  const Spacer(),
+                  if (_dateSold != null)
+                    GestureDetector(
+                      onTap: () => setState(() => _dateSold = null),
+                      child: Icon(
+                        Icons.clear,
+                        color: Colors.grey[400],
+                        size: 20,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -1880,59 +1910,3 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
 }
 
 // Helper widget for displaying detail items in tracker tab
-class _DetailItem extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-
-  const _DetailItem({
-    required this.label,
-    required this.value,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Theme.of(context).colorScheme.outline),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                icon,
-                size: 14,
-                color: Colors.grey[600],
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-}

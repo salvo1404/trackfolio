@@ -11,6 +11,8 @@ class PortfolioItem {
   final DateTime lastUpdated;
   final String currency; // Currency code (USD, EUR, etc.)
   final double? fees; // Transaction fees
+  final String? symbol; // Ticker symbol (for stocks/ETFs/crypto)
+  final DateTime? dateSold; // Date the asset was sold
 
   PortfolioItem({
     required this.id,
@@ -23,6 +25,8 @@ class PortfolioItem {
     required this.lastUpdated,
     this.currency = 'USD', // Default to USD
     this.fees = 0.0,
+    this.symbol,
+    this.dateSold,
   });
 
   double get totalValue => quantity * currentValue;
@@ -42,6 +46,8 @@ class PortfolioItem {
       'lastUpdated': lastUpdated.toIso8601String(),
       'currency': currency,
       'fees': fees ?? 0.0,
+      'symbol': symbol,
+      'dateSold': dateSold?.toIso8601String(),
     };
   }
 
@@ -57,6 +63,8 @@ class PortfolioItem {
       lastUpdated: DateTime.parse(json['lastUpdated']),
       currency: json['currency'] ?? 'USD', // Default to USD if not present
       fees: (json['fees'] as num?)?.toDouble() ?? 0.0,
+      symbol: json['symbol'] as String?,
+      dateSold: json['dateSold'] != null ? DateTime.parse(json['dateSold']) : null,
     );
   }
 
@@ -77,6 +85,8 @@ class PortfolioItem {
     DateTime? lastUpdated,
     String? currency,
     double? fees,
+    String? symbol,
+    DateTime? dateSold,
   }) {
     return PortfolioItem(
       id: id ?? this.id,
@@ -89,6 +99,8 @@ class PortfolioItem {
       lastUpdated: lastUpdated ?? this.lastUpdated,
       currency: currency ?? this.currency,
       fees: fees ?? this.fees,
+      symbol: symbol ?? this.symbol,
+      dateSold: dateSold ?? this.dateSold,
     );
   }
 }

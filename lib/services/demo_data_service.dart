@@ -36,6 +36,7 @@ class DemoDataService {
         lastUpdated: now,
         currency: 'USD',
         fees: 9.99,
+        symbol: 'AAPL',
       ),
       PortfolioItem(
         id: 'demo-2',
@@ -48,6 +49,7 @@ class DemoDataService {
         lastUpdated: now,
         currency: 'USD',
         fees: 4.95,
+        symbol: 'VOO',
       ),
       // Real Estate
       PortfolioItem(

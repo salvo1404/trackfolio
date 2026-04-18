@@ -119,17 +119,13 @@ class AuthService extends ChangeNotifier {
     // Check if demo user exists
     var demoUser = await _storage.getUser(DemoDataService.demoUsername);
 
-    if (demoUser == null) {
-      // Create demo user
-      demoUser = DemoDataService.createDemoUser();
-      await _storage.saveUser(demoUser);
-
-      // Populate demo data
-      await _storage.savePortfolioItems(DemoDataService.createDemoPortfolioItems());
-      await _storage.saveGoals(DemoDataService.createDemoGoals());
-      await _storage.saveBudgets(DemoDataService.createDemoBudgets());
-      await _storage.saveShareTransactions(DemoDataService.createDemoShareTransactions());
-    }
+    // Always (re)create demo user and data so new fields are picked up
+    demoUser = DemoDataService.createDemoUser();
+    await _storage.saveUser(demoUser);
+    await _storage.savePortfolioItems(DemoDataService.createDemoPortfolioItems());
+    await _storage.saveGoals(DemoDataService.createDemoGoals());
+    await _storage.saveBudgets(DemoDataService.createDemoBudgets());
+    await _storage.saveShareTransactions(DemoDataService.createDemoShareTransactions());
 
     // Log in as demo user
     _currentUser = demoUser;

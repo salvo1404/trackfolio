@@ -9,8 +9,15 @@ import '../../utils/constants.dart';
 import '../../utils/theme.dart';
 import '../../utils/currency_formatter.dart';
 
-class PortfolioPage extends StatelessWidget {
+class PortfolioPage extends StatefulWidget {
   const PortfolioPage({super.key});
+
+  @override
+  State<PortfolioPage> createState() => _PortfolioPageState();
+}
+
+class _PortfolioPageState extends State<PortfolioPage> {
+  final Set<String> _collapsedTypes = {};
 
   @override
   Widget build(BuildContext context) {
@@ -65,71 +72,90 @@ class PortfolioPage extends StatelessWidget {
                   0,
                   (sum, item) => sum + item.totalValue,
                 );
+                final isCollapsed = _collapsedTypes.contains(type);
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 4,
-                            height: 24,
-                            color: AppTheme.getPortfolioTypeColor(type),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            type,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          if (isCollapsed) {
+                            _collapsedTypes.remove(type);
+                          } else {
+                            _collapsedTypes.add(type);
+                          }
+                        });
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 4,
+                              height: 24,
+                              color: AppTheme.getPortfolioTypeColor(type),
                             ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            currencyFormatter.format(totalValue),
-                            style: TextStyle(
-                              fontSize: 16,
+                            const SizedBox(width: 12),
+                            Text(
+                              type,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              isCollapsed ? Icons.expand_more : Icons.expand_less,
                               color: Colors.grey[600],
+                              size: 20,
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    ...items.map(
-                      (item) => Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          title: Text(item.name),
-                          subtitle: Text(
-                            'Qty: ${item.quantity} | Cost: ${currencyFormatter.format(item.totalCost)}',
-                          ),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                currencyFormatter.format(item.totalValue),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            const Spacer(),
+                            Text(
+                              currencyFormatter.format(totalValue),
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[600],
                               ),
-                              Text(
-                                '${item.gainLoss >= 0 ? '+' : ''}${currencyFormatter.format(item.gainLoss)}',
-                                style: TextStyle(
-                                  color: item.gainLoss >= 0
-                                      ? AppTheme.successColor
-                                      : AppTheme.errorColor,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                          onTap: () => _showEditItemDialog(context, item),
+                            ),
+                          ],
                         ),
                       ),
                     ),
+                    if (!isCollapsed)
+                      ...items.map(
+                        (item) => Card(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            title: Text(item.name),
+                            subtitle: Text(
+                              'Qty: ${item.quantity} | Cost: ${currencyFormatter.format(item.totalCost)}',
+                            ),
+                            trailing: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  currencyFormatter.format(item.totalValue),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  '${item.gainLoss >= 0 ? '+' : ''}${currencyFormatter.format(item.gainLoss)}',
+                                  style: TextStyle(
+                                    color: item.gainLoss >= 0
+                                        ? AppTheme.successColor
+                                        : AppTheme.errorColor,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            onTap: () => _showEditItemDialog(context, item),
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 16),
                   ],
                 );
