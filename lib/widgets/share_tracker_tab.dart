@@ -485,7 +485,7 @@ class ShareTrackerTab extends StatelessWidget {
 
   IconData _getIconForType(String type) {
     switch (type.toLowerCase()) {
-      case 'shares':
+      case 'stocks & etfs':
         return Icons.show_chart;
       case 'crypto':
         return Icons.currency_bitcoin;
@@ -536,6 +536,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
   late TextEditingController _quantityController;
   late TextEditingController _purchasePriceController;
   late TextEditingController _currentValueController;
+  late TextEditingController _feesController;
   late DateTime _purchaseDate;
   double? _suggestedPrice;
   bool _isLoadingPrice = false;
@@ -565,6 +566,9 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
     _currentValueController = TextEditingController(
       text: widget.item?.currentValue.toString() ?? '',
     );
+    _feesController = TextEditingController(
+      text: (widget.item?.fees ?? 0.0).toString(),
+    );
     _purchaseDate = widget.item?.purchaseDate ?? DateTime.now();
   }
 
@@ -575,13 +579,15 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
     _quantityController.dispose();
     _purchasePriceController.dispose();
     _currentValueController.dispose();
+    _feesController.dispose();
     super.dispose();
   }
 
   double get _totalCost {
     final quantity = double.tryParse(_quantityController.text) ?? 0;
     final price = double.tryParse(_purchasePriceController.text) ?? 0;
-    return quantity * price;
+    final fees = double.tryParse(_feesController.text) ?? 0;
+    return quantity * price + fees;
   }
 
   Future<void> _searchSymbols(String keyword) async {
@@ -692,10 +698,13 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
       name: _nameController.text,
       quantity: quantity,
       purchasePrice: double.parse(_purchasePriceController.text),
-      currentValue: double.parse(_currentValueController.text),
+      currentValue: _type == AppConstants.typeCash
+          ? double.parse(_purchasePriceController.text)
+          : double.tryParse(_currentValueController.text) ?? 0.0,
       purchaseDate: _purchaseDate,
       lastUpdated: DateTime.now(),
       currency: _currency,
+      fees: double.tryParse(_feesController.text) ?? 0.0,
     );
 
     if (widget.item == null) {
@@ -721,7 +730,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Stock Symbol',
+            'Symbol',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -862,7 +871,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Company Name',
+            'Name',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -1045,7 +1054,52 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
       ),
       const SizedBox(height: 20),
 
-      // Total Cost (calculated)
+      // Fees
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Fees',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _feesController,
+            decoration: InputDecoration(
+              hintText: 'Transaction fees',
+              prefixIcon: Icon(
+                Icons.receipt_long,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+            ),
+            keyboardType: TextInputType.number,
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+
+      // Total Cost (calculated: price x quantity + fees)
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1073,20 +1127,25 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
                   size: 20,
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  '\$${_totalCost.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
+                Expanded(
+                  child: Text(
+                    '\$${_totalCost.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  '(${_quantityController.text.isEmpty ? '0' : _quantityController.text} × \$${_purchasePriceController.text.isEmpty ? '0' : _purchasePriceController.text})',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
+                Flexible(
+                  child: Text(
+                    '(${_quantityController.text.isEmpty ? '0' : _quantityController.text} × \$${_purchasePriceController.text.isEmpty ? '0' : _purchasePriceController.text} + \$${_feesController.text.isEmpty ? '0' : _feesController.text})',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -1284,51 +1343,52 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
           ),
         ],
       ),
-      const SizedBox(height: 20),
-
-      // Current Value
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Current Value',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
+      // Current Value (hidden for Cash - always equals purchase price)
+      if (_type != AppConstants.typeCash) ...[
+        const SizedBox(height: 20),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Current Value',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _currentValueController,
-            decoration: InputDecoration(
-              hintText: 'Current total value',
-              prefixIcon: Icon(
-                Icons.trending_up,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              filled: true,
-              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _currentValueController,
+              decoration: InputDecoration(
+                hintText: 'Current total value',
+                prefixIcon: Icon(
+                  Icons.trending_up,
                   color: Theme.of(context).colorScheme.primary,
-                  width: 2,
+                ),
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 2,
+                  ),
                 ),
               ),
+              keyboardType: TextInputType.number,
+              validator: (v) => v?.isEmpty == true ? 'Required' : null,
             ),
-            keyboardType: TextInputType.number,
-            validator: (v) => v?.isEmpty == true ? 'Required' : null,
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     ];
   }
 
@@ -1714,7 +1774,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
                   const SizedBox(height: 20),
 
                   // Dynamic fields based on asset type
-                  if (_type == AppConstants.typeShares)
+                  if (_type == AppConstants.typeStocksAndETFs || _type == AppConstants.typeCrypto)
                     ..._buildSharesFields(context)
                   else if (_isSimplifiedAssetType())
                     ..._buildSimplifiedFields(context)

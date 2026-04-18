@@ -10,6 +10,7 @@ class PortfolioItem {
   final DateTime purchaseDate;
   final DateTime lastUpdated;
   final String currency; // Currency code (USD, EUR, etc.)
+  final double? fees; // Transaction fees
 
   PortfolioItem({
     required this.id,
@@ -21,10 +22,11 @@ class PortfolioItem {
     required this.purchaseDate,
     required this.lastUpdated,
     this.currency = 'USD', // Default to USD
+    this.fees = 0.0,
   });
 
   double get totalValue => quantity * currentValue;
-  double get totalCost => quantity * purchasePrice;
+  double get totalCost => quantity * purchasePrice + (fees ?? 0.0);
   double get gainLoss => totalValue - totalCost;
   double get gainLossPercent => totalCost > 0 ? (gainLoss / totalCost) * 100 : 0;
 
@@ -39,13 +41,14 @@ class PortfolioItem {
       'purchaseDate': purchaseDate.toIso8601String(),
       'lastUpdated': lastUpdated.toIso8601String(),
       'currency': currency,
+      'fees': fees ?? 0.0,
     };
   }
 
   factory PortfolioItem.fromJson(Map<String, dynamic> json) {
     return PortfolioItem(
       id: json['id'],
-      type: json['type'],
+      type: json['type'] == 'Shares' ? 'Stocks & ETFs' : json['type'],
       name: json['name'],
       quantity: (json['quantity'] as num).toDouble(),
       purchasePrice: (json['purchasePrice'] as num).toDouble(),
@@ -53,6 +56,7 @@ class PortfolioItem {
       purchaseDate: DateTime.parse(json['purchaseDate']),
       lastUpdated: DateTime.parse(json['lastUpdated']),
       currency: json['currency'] ?? 'USD', // Default to USD if not present
+      fees: (json['fees'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -72,6 +76,7 @@ class PortfolioItem {
     DateTime? purchaseDate,
     DateTime? lastUpdated,
     String? currency,
+    double? fees,
   }) {
     return PortfolioItem(
       id: id ?? this.id,
@@ -83,6 +88,7 @@ class PortfolioItem {
       purchaseDate: purchaseDate ?? this.purchaseDate,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       currency: currency ?? this.currency,
+      fees: fees ?? this.fees,
     );
   }
 }

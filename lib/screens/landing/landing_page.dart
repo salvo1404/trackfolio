@@ -272,7 +272,7 @@ class LandingPage extends StatelessWidget {
             icon: Icons.account_balance_wallet,
             value: '5+',
             label: 'Asset Types',
-            color: AppTheme.getPortfolioTypeColor(AppConstants.typeShares),
+            color: AppTheme.getPortfolioTypeColor(AppConstants.typeStocksAndETFs),
           ),
           _StatCard(
             icon: Icons.currency_exchange,

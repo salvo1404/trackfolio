@@ -118,7 +118,7 @@ class AppTheme {
 
   static Color getPortfolioTypeColor(String type) {
     switch (type) {
-      case AppConstants.typeShares:
+      case AppConstants.typeStocksAndETFs:
         return const Color(0xFF1E88E5);
       case AppConstants.typeCrypto:
         return const Color(0xFFFF6F00);
