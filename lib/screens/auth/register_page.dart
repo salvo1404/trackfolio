@@ -14,11 +14,11 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _displayNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _usernameFocusNode = FocusNode();
+  final _displayNameFocusNode = FocusNode();
   final _emailFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
   final _confirmPasswordFocusNode = FocusNode();
@@ -28,11 +28,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _displayNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _usernameFocusNode.dispose();
+    _displayNameFocusNode.dispose();
     _emailFocusNode.dispose();
     _passwordFocusNode.dispose();
     _confirmPasswordFocusNode.dispose();
@@ -46,9 +46,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
     final authService = context.read<AuthService>();
     final result = await authService.register(
-      username: _usernameController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
+      displayName: _displayNameController.text.trim().isEmpty
+          ? null
+          : _displayNameController.text.trim(),
     );
 
     setState(() => _isLoading = false);
@@ -162,13 +164,13 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                           const SizedBox(height: 40),
 
-                          // Username Field
+                          // Display Name Field (optional)
                           TextFormField(
-                            controller: _usernameController,
-                            focusNode: _usernameFocusNode,
+                            controller: _displayNameController,
+                            focusNode: _displayNameFocusNode,
                             decoration: InputDecoration(
-                              labelText: 'Username',
-                              hintText: 'Choose a unique username',
+                              labelText: 'Display Name (optional)',
+                              hintText: 'Choose a display name',
                               prefixIcon: Icon(
                                 Icons.person_outline,
                                 color: Theme.of(context).colorScheme.primary,
@@ -191,15 +193,6 @@ class _RegisterPageState extends State<RegisterPage> {
                             textInputAction: TextInputAction.next,
                             onFieldSubmitted: (_) {
                               _emailFocusNode.requestFocus();
-                            },
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter a username';
-                              }
-                              if (value.length < 3) {
-                                return 'Username must be at least 3 characters';
-                              }
-                              return null;
                             },
                           ),
                           const SizedBox(height: 20),

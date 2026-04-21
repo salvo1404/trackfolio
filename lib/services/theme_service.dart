@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'storage_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/constants.dart';
 
 class ThemeService extends ChangeNotifier {
-  final StorageService _storage;
+  final SharedPreferences _prefs;
   late bool _isDarkMode;
   bool _hasUserPreference = false;
 
-  ThemeService(this._storage) {
-    final saved = _storage.getBool(AppConstants.themeKey);
+  ThemeService(this._prefs) {
+    final saved = _prefs.getBool(AppConstants.themeKey);
     if (saved != null) {
       _isDarkMode = saved;
       _hasUserPreference = true;
@@ -31,7 +31,7 @@ class ThemeService extends ChangeNotifier {
   void toggleTheme() {
     _isDarkMode = !_isDarkMode;
     _hasUserPreference = true;
-    _storage.setBool(AppConstants.themeKey, _isDarkMode);
+    _prefs.setBool(AppConstants.themeKey, _isDarkMode);
     notifyListeners();
   }
 }

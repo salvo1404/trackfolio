@@ -6,14 +6,11 @@ import '../models/share_transaction.dart';
 import '../utils/constants.dart';
 
 class DemoDataService {
-  static const String demoUsername = 'demo';
-  static const String demoPassword = 'demo123';
-
-  static User createDemoUser() {
+  static User createDemoUser(String uid) {
     return User(
-      username: demoUsername,
+      uid: uid,
       email: 'demo@trackfolio.com',
-      password: demoPassword,
+      displayName: 'Demo User',
       fullName: 'Demo User',
       country: 'United States',
       currency: 'USD',
@@ -117,7 +114,8 @@ class DemoDataService {
       Goal(
         id: 'goal-2',
         title: 'Vacation to Japan',
-        description: 'Save for a 2-week trip to Japan including flights and accommodation',
+        description:
+            'Save for a 2-week trip to Japan including flights and accommodation',
         targetAmount: 8000.0,
         currentAmount: 5200.0,
         targetDate: now.add(const Duration(days: 180)),

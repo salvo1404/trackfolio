@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class StockApiService {
-  // Alpha Vantage API key - IMPORTANT: Replace with your own key
+  // Pass via: flutter run --dart-define=ALPHA_VANTAGE_KEY=your_key
   // Get a free API key at: https://www.alphavantage.co/support/#api-key
-  static const String _apiKey = 'FXHX7WL780IL2WWG'; // Replace with your actual API key
+  static const String _apiKey = String.fromEnvironment('ALPHA_VANTAGE_KEY', defaultValue: '');
   static const String _baseUrl = 'https://www.alphavantage.co/query';
 
   /// Lookup stock/ETF by symbol and get current price.

@@ -20,7 +20,7 @@ class DashboardPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Welcome, ${authService.currentUser?.username ?? "User"}'),
+        title: Text('Welcome, ${authService.currentUser?.fullName ?? authService.currentUser?.displayName ?? authService.currentUser?.email ?? "User"}'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),

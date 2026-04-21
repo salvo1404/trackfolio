@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
+import '../../services/portfolio_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/theme.dart';
 
@@ -14,18 +15,18 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _usernameFocusNode = FocusNode();
+  final _emailFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
   bool _isLoading = false;
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
-    _usernameFocusNode.dispose();
+    _emailFocusNode.dispose();
     _passwordFocusNode.dispose();
     super.dispose();
   }
@@ -35,19 +36,23 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _isLoading = true);
 
+    // Capture references before async gap
     final authService = context.read<AuthService>();
+    final portfolioService = context.read<PortfolioService>();
+
     final result = await authService.login(
-      username: _usernameController.text.trim(),
+      email: _emailController.text.trim(),
       password: _passwordController.text,
     );
-
-    setState(() => _isLoading = false);
 
     if (!mounted) return;
 
     if (result.success) {
+      await portfolioService.loadData();
+      if (!mounted) return;
       Navigator.of(context).pushReplacementNamed('/dashboard');
     } else {
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -70,16 +75,20 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _handleDemoLogin() async {
     setState(() => _isLoading = true);
 
+    // Capture references before async gap
     final authService = context.read<AuthService>();
-    final result = await authService.loginDemo();
+    final portfolioService = context.read<PortfolioService>();
 
-    setState(() => _isLoading = false);
+    final result = await authService.loginDemo();
 
     if (!mounted) return;
 
     if (result.success) {
+      await portfolioService.loadData();
+      if (!mounted) return;
       Navigator.of(context).pushReplacementNamed('/dashboard');
     } else {
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -168,15 +177,15 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 40),
 
-                          // Username Field
+                          // Email Field
                           TextFormField(
-                            controller: _usernameController,
-                            focusNode: _usernameFocusNode,
+                            controller: _emailController,
+                            focusNode: _emailFocusNode,
                             decoration: InputDecoration(
-                              labelText: 'Username',
-                              hintText: 'Enter your username',
+                              labelText: 'Email',
+                              hintText: 'Enter your email',
                               prefixIcon: Icon(
-                                Icons.person_outline,
+                                Icons.email_outlined,
                                 color: Theme.of(context).colorScheme.primary,
                               ),
                               border: OutlineInputBorder(
@@ -194,13 +203,17 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                             ),
+                            keyboardType: TextInputType.emailAddress,
                             textInputAction: TextInputAction.next,
                             onFieldSubmitted: (_) {
                               _passwordFocusNode.requestFocus();
                             },
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'Please enter your username';
+                                return 'Please enter your email';
+                              }
+                              if (!value.contains('@')) {
+                                return 'Please enter a valid email';
                               }
                               return null;
                             },
