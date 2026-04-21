@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 class User {
-  final String username;
+  final String uid;
   final String email;
-  final String password;
   final DateTime createdAt;
+  final String? displayName;
   final String? photoUrl;
   final String? country;
   final String? currency;
@@ -12,10 +12,10 @@ class User {
   final String? phoneNumber;
 
   User({
-    required this.username,
+    required this.uid,
     required this.email,
-    required this.password,
     required this.createdAt,
+    this.displayName,
     this.photoUrl,
     this.country,
     this.currency,
@@ -25,10 +25,10 @@ class User {
 
   Map<String, dynamic> toJson() {
     return {
-      'username': username,
+      'uid': uid,
       'email': email,
-      'password': password,
       'createdAt': createdAt.toIso8601String(),
+      'displayName': displayName,
       'photoUrl': photoUrl,
       'country': country,
       'currency': currency,
@@ -39,10 +39,10 @@ class User {
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      username: json['username'],
-      email: json['email'],
-      password: json['password'],
+      uid: json['uid'] ?? '',
+      email: json['email'] ?? '',
       createdAt: DateTime.parse(json['createdAt']),
+      displayName: json['displayName'],
       photoUrl: json['photoUrl'],
       country: json['country'],
       currency: json['currency'],
@@ -52,10 +52,10 @@ class User {
   }
 
   User copyWith({
-    String? username,
+    String? uid,
     String? email,
-    String? password,
     DateTime? createdAt,
+    String? displayName,
     String? photoUrl,
     String? country,
     String? currency,
@@ -63,10 +63,10 @@ class User {
     String? phoneNumber,
   }) {
     return User(
-      username: username ?? this.username,
+      uid: uid ?? this.uid,
       email: email ?? this.email,
-      password: password ?? this.password,
       createdAt: createdAt ?? this.createdAt,
+      displayName: displayName ?? this.displayName,
       photoUrl: photoUrl ?? this.photoUrl,
       country: country ?? this.country,
       currency: currency ?? this.currency,

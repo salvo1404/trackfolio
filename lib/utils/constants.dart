@@ -8,15 +8,7 @@ class AppConstants {
   static const int secondaryColorValue = 0xFF1565C0;
   static const int accentColorValue = 0xFFFFA726;
 
-  // Storage Keys
-  static const String isLoggedInKey = 'is_logged_in';
-  static const String currentUserKey = 'current_user';
-  static const String usersKey = 'users';
-  static const String portfolioKey = 'portfolio_items';
-  static const String budgetsKey = 'budgets';
-  static const String transactionsKey = 'transactions';
-  static const String goalsKey = 'goals';
-  static const String shareTransactionsKey = 'share_transactions';
+  // Local Storage Keys
   static const String themeKey = 'is_dark_mode';
 
   // Portfolio Types

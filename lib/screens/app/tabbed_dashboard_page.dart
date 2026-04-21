@@ -237,7 +237,7 @@ class _ProfileDrawerState extends State<_ProfileDrawer> {
                   : null,
             ),
             accountName: Text(
-              user?.fullName ?? user?.username ?? 'User',
+              user?.fullName ?? user?.displayName ?? 'User',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,

@@ -33,7 +33,7 @@ jobs:
         run: flutter pub get
 
       - name: Build web app
-        run: flutter build web --release --base-href /trackfolio/
+        run: flutter build web --release --base-href /trackfolio/ --dart-define=ALPHA_VANTAGE_KEY=${{ secrets.ALPHA_VANTAGE_KEY }}
 
       - name: Add .nojekyll file
         run: touch build/web/.nojekyll

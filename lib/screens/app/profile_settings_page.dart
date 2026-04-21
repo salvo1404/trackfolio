@@ -205,16 +205,6 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                initialValue: user?.username,
-                decoration: const InputDecoration(
-                  labelText: 'Username',
-                  prefixIcon: Icon(Icons.account_circle_outlined),
-                  border: OutlineInputBorder(),
-                ),
-                enabled: false,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
                 initialValue: user?.email,
                 decoration: const InputDecoration(
                   labelText: 'Email',
