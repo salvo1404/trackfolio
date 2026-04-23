@@ -460,17 +460,52 @@ class _ShareTrackerTabState extends State<ShareTrackerTab> {
     }
   }
 
-  void _showAddItemDialog(BuildContext context) {
-    showDialog(
+  void _showAddItemDialog(BuildContext context) async {
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => const PortfolioItemDialog(),
     );
+    if (result != null && context.mounted) {
+      _showSuccessSnackBar(context, result['name'], result['isNew']);
+    }
   }
 
-  void _showEditItemDialog(BuildContext context, PortfolioItem item) {
-    showDialog(
+  void _showEditItemDialog(BuildContext context, PortfolioItem item) async {
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => PortfolioItemDialog(item: item),
+    );
+    if (result != null && context.mounted) {
+      _showSuccessSnackBar(context, result['name'], result['isNew']);
+    }
+  }
+
+  void _showSuccessSnackBar(
+      BuildContext context, String name, bool isNew) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded,
+                color: Colors.white, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                isNew
+                    ? '$name added to your portfolio'
+                    : '$name updated successfully',
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: Colors.green.shade700,
+        duration: const Duration(seconds: 3),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      ),
     );
   }
 }
@@ -669,13 +704,17 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
       dateSold: _dateSold,
     );
 
-    if (widget.item == null) {
+    final isNew = widget.item == null;
+    if (isNew) {
       portfolioService.addPortfolioItem(item);
     } else {
       portfolioService.updatePortfolioItem(item);
     }
 
-    Navigator.of(context).pop();
+    Navigator.of(context).pop({
+      'name': item.name,
+      'isNew': isNew,
+    });
   }
 
   void _delete() {
@@ -1876,23 +1915,33 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        flex: widget.item != null ? 1 : 2,
-                        child: ElevatedButton.icon(
+                        flex: 2,
+                        child: FilledButton.icon(
                           onPressed: _save,
                           icon: Icon(
-                            widget.item == null ? Icons.add : Icons.check,
-                            size: 18,
+                            widget.item == null
+                                ? Icons.add_circle_outline
+                                : Icons.save_rounded,
+                            size: 20,
                           ),
                           label: Text(
-                            widget.item == null ? 'Add Asset' : 'Save',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            widget.item == null
+                                ? 'Add to Portfolio'
+                                : 'Save Changes',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            elevation: 2,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.onPrimary,
                           ),
                         ),
                       ),
