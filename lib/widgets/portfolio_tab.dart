@@ -1,6 +1,8 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 import '../services/portfolio_service.dart';
 import '../services/auth_service.dart';
 import '../services/currency_service.dart';
@@ -252,6 +254,19 @@ class PortfolioTab extends StatelessWidget {
                     ],
                   ),
                 ),
+              ),
+            ],
+
+            // Portfolio Value Over Time
+            if (portfolioService.portfolioItems
+                .where((item) => item.dateSold == null)
+                .isNotEmpty) ...[
+              const SizedBox(height: 24),
+              _buildPortfolioValueChart(
+                portfolioService,
+                currencyFormatter,
+                currencyService,
+                context,
               ),
             ],
 
@@ -539,6 +554,27 @@ class PortfolioTab extends StatelessWidget {
     );
   }
 
+  Widget _buildPortfolioValueChart(
+    PortfolioService portfolioService,
+    CurrencyFormatter currencyFormatter,
+    CurrencyService currencyService,
+    BuildContext context,
+  ) {
+    final activeItems = portfolioService.portfolioItems
+        .where((item) => item.dateSold == null)
+        .toList();
+
+    activeItems.sort((a, b) => a.purchaseDate.compareTo(b.purchaseDate));
+
+    if (activeItems.isEmpty) return const SizedBox.shrink();
+
+    return _PortfolioValueChart(
+      activeItems: activeItems,
+      currencyFormatter: currencyFormatter,
+      currencyService: currencyService,
+    );
+  }
+
   List<PieChartSectionData> _buildPieChartSections(
     Map<String, double> portfolioByType,
     double total,
@@ -781,7 +817,7 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${widget.items.length} ${widget.items.length == 1 ? 'item' : 'items'}',
+                          '${widget.items.map((e) => e.name).toSet().length} ${widget.items.map((e) => e.name).toSet().length == 1 ? 'item' : 'items'}',
                           style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                         ),
                       ],
@@ -838,87 +874,7 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
                 ? Column(
                     children: [
                       Divider(height: 1, color: Theme.of(context).dividerColor),
-                      ...widget.items.map((item) {
-                        final itemValueUSD = widget.currencyService.convertBetween(
-                          item.totalValue,
-                          item.currency,
-                          'USD',
-                        );
-                        final itemCostUSD = widget.currencyService.convertBetween(
-                          item.totalCost,
-                          item.currency,
-                          'USD',
-                        );
-                        final itemGainLoss = itemValueUSD - itemCostUSD;
-                        final itemGainLossColor = itemGainLoss >= 0
-                            ? AppTheme.successColor
-                            : AppTheme.errorColor;
-
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                          child: Row(
-                            children: [
-                              const SizedBox(width: 72),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.name,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Qty: ${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    widget.currencyFormatter.format(itemValueUSD),
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 1,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: itemGainLossColor.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      '${itemGainLoss >= 0 ? '+' : ''}${widget.currencyFormatter.format(itemGainLoss)}',
-                                      style: TextStyle(
-                                        color: itemGainLossColor,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
+                      ..._buildAggregatedItems(context),
                       const SizedBox(height: 4),
                     ],
                   )
@@ -927,6 +883,109 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildAggregatedItems(BuildContext context) {
+    // Group items by name to aggregate duplicates
+    final grouped = <String, List<PortfolioItem>>{};
+    for (final item in widget.items) {
+      grouped.putIfAbsent(item.name, () => []).add(item);
+    }
+
+    final rows = grouped.entries.map((entry) {
+      final items = entry.value;
+      double totalValueUSD = 0;
+      double totalCostUSD = 0;
+      double totalQty = 0;
+
+      for (final item in items) {
+        totalValueUSD += widget.currencyService.convertBetween(
+          item.totalValue,
+          item.currency,
+          'USD',
+        );
+        totalCostUSD += widget.currencyService.convertBetween(
+          item.totalCost,
+          item.currency,
+          'USD',
+        );
+        totalQty += item.quantity;
+      }
+
+      return (
+        name: entry.key,
+        qty: totalQty,
+        valueUSD: totalValueUSD,
+        gainLoss: totalValueUSD - totalCostUSD,
+      );
+    }).toList();
+
+    // Sort by value descending
+    rows.sort((a, b) => b.valueUSD.compareTo(a.valueUSD));
+
+    return rows.map((row) {
+      final gainLossColor =
+          row.gainLoss >= 0 ? AppTheme.successColor : AppTheme.errorColor;
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          children: [
+            const SizedBox(width: 72),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    row.name,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Qty: ${row.qty % 1 == 0 ? row.qty.toInt() : row.qty}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  widget.currencyFormatter.format(row.valueUSD),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: gainLossColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '${row.gainLoss >= 0 ? '+' : ''}${widget.currencyFormatter.format(row.gainLoss)}',
+                    style: TextStyle(
+                      color: gainLossColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }).toList();
   }
 }
 
@@ -959,3 +1018,310 @@ class _StatItem extends StatelessWidget {
     );
   }
 }
+
+class _PortfolioValueChart extends StatefulWidget {
+  final List<PortfolioItem> activeItems;
+  final CurrencyFormatter currencyFormatter;
+  final CurrencyService currencyService;
+
+  const _PortfolioValueChart({
+    required this.activeItems,
+    required this.currencyFormatter,
+    required this.currencyService,
+  });
+
+  @override
+  State<_PortfolioValueChart> createState() => _PortfolioValueChartState();
+}
+
+class _PortfolioValueChartState extends State<_PortfolioValueChart> {
+  final Set<String> _hiddenTypes = {};
+
+  @override
+  Widget build(BuildContext context) {
+    final items = widget.activeItems;
+    final currencyFormatter = widget.currencyFormatter;
+    final currencyService = widget.currencyService;
+
+    // Collect all unique types in order of appearance
+    final typeOrder = <String>[];
+    for (final item in items) {
+      if (!typeOrder.contains(item.type)) typeOrder.add(item.type);
+    }
+
+    // Build cumulative value per type at each timeline point
+    final Map<String, List<FlSpot>> typeSpots = {
+      for (final type in typeOrder) type: [],
+    };
+    final Map<String, double> runningTotals = {
+      for (final type in typeOrder) type: 0,
+    };
+
+    for (int i = 0; i < items.length; i++) {
+      final item = items[i];
+      final valueUsd = currencyService.convertBetween(
+        item.totalValue,
+        item.currency,
+        'USD',
+      );
+      runningTotals[item.type] = runningTotals[item.type]! + valueUsd;
+
+      for (final type in typeOrder) {
+        typeSpots[type]!.add(FlSpot(i.toDouble(), runningTotals[type]!));
+      }
+    }
+
+    // Visible types only
+    final visibleTypes =
+        typeOrder.where((t) => !_hiddenTypes.contains(t)).toList();
+
+    double maxY = 0;
+    for (final type in visibleTypes) {
+      maxY = math.max(maxY, runningTotals[type]!);
+    }
+    final chartMax = maxY == 0 ? 100.0 : maxY * 1.15;
+
+    // Build line data for visible types only
+    final lineBars = <LineChartBarData>[];
+    for (final type in visibleTypes) {
+      final color = AppTheme.getPortfolioTypeColor(type);
+      lineBars.add(
+        LineChartBarData(
+          spots: typeSpots[type]!,
+          isCurved: true,
+          curveSmoothness: 0.3,
+          color: color,
+          barWidth: 3,
+          isStrokeCapRound: true,
+          dotData: FlDotData(
+            show: true,
+            getDotPainter: (spot, percent, barData, index) {
+              return FlDotCirclePainter(
+                radius: 3.5,
+                color: Colors.white,
+                strokeWidth: 2,
+                strokeColor: color,
+              );
+            },
+          ),
+          belowBarData: BarAreaData(
+            show: true,
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                color.withValues(alpha: 0.2),
+                color.withValues(alpha: 0.02),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.area_chart_rounded,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Portfolio Value Over Time',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 8,
+              children: typeOrder.map((type) {
+                final isVisible = !_hiddenTypes.contains(type);
+                final color = AppTheme.getPortfolioTypeColor(type);
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      if (isVisible) {
+                        _hiddenTypes.add(type);
+                      } else {
+                        _hiddenTypes.remove(type);
+                      }
+                    });
+                  },
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 200),
+                    opacity: isVisible ? 1.0 : 0.4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: isVisible
+                            ? color.withValues(alpha: 0.12)
+                            : Colors.grey.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isVisible
+                              ? color.withValues(alpha: 0.4)
+                              : Colors.grey.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: isVisible ? color : Colors.grey,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            type,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: isVisible
+                                  ? color
+                                  : Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 240,
+              child: visibleTypes.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Tap a type above to show its line',
+                        style: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 14,
+                        ),
+                      ),
+                    )
+                  : LineChart(
+                      LineChartData(
+                        minY: 0,
+                        maxY: chartMax,
+                        lineTouchData: LineTouchData(
+                          touchTooltipData: LineTouchTooltipData(
+                            tooltipRoundedRadius: 8,
+                            getTooltipItems: (touchedSpots) {
+                              return touchedSpots.map((spot) {
+                                final type = visibleTypes[spot.barIndex];
+                                final color =
+                                    AppTheme.getPortfolioTypeColor(type);
+                                return LineTooltipItem(
+                                  '$type\n${currencyFormatter.format(spot.y)}',
+                                  TextStyle(
+                                    color: color,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                );
+                              }).toList();
+                            },
+                          ),
+                        ),
+                        gridData: FlGridData(
+                          show: true,
+                          drawVerticalLine: false,
+                          horizontalInterval: chartMax / 4,
+                          getDrawingHorizontalLine: (value) {
+                            return FlLine(
+                              color: Colors.grey.withValues(alpha: 0.15),
+                              strokeWidth: 1,
+                            );
+                          },
+                        ),
+                        titlesData: FlTitlesData(
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 36,
+                              interval: math.max(1,
+                                  (items.length / 5).ceil().toDouble()),
+                              getTitlesWidget: (value, meta) {
+                                final index = value.toInt();
+                                if (index < 0 || index >= items.length) {
+                                  return const SizedBox.shrink();
+                                }
+                                return SideTitleWidget(
+                                  meta: meta,
+                                  space: 6,
+                                  child: Text(
+                                    DateFormat('MMM yy')
+                                        .format(items[index].purchaseDate),
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 60,
+                              getTitlesWidget: (value, meta) {
+                                return Text(
+                                  currencyFormatter.formatCompact(value),
+                                  style: const TextStyle(
+                                      fontSize: 10, color: Colors.grey),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        borderData: FlBorderData(show: false),
+                        lineBarsData: lineBars,
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

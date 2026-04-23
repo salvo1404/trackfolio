@@ -28,4 +28,11 @@ class CurrencyFormatter {
   String getSymbol() {
     return _currencyService.getSymbol(_user?.currency ?? 'USD');
   }
+
+  String formatCompact(double amountInUSD) {
+    final userCurrency = _user?.currency ?? 'USD';
+    final convertedAmount = _currencyService.convert(amountInUSD, userCurrency);
+    final symbol = _currencyService.getSymbol(userCurrency);
+    return '$symbol${NumberFormat.compact().format(convertedAmount)}';
+  }
 }
