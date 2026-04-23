@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class StockApiService {
@@ -84,7 +85,7 @@ class StockApiService {
 
       return null;
     } catch (e) {
-      print('Error fetching stock data: $e');
+      debugPrint('Error fetching stock data: $e');
       return null;
     }
   }
@@ -121,7 +122,7 @@ class StockApiService {
 
       return [];
     } catch (e) {
-      print('Error searching symbols: $e');
+      debugPrint('Error searching symbols: $e');
       return [];
     }
   }
@@ -160,7 +161,7 @@ class StockApiService {
       }
       return {};
     } catch (e) {
-      print('Error fetching crypto prices: $e');
+      debugPrint('Error fetching crypto prices: $e');
       return {};
     }
   }

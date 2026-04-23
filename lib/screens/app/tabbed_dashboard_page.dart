@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/theme_service.dart';
-import '../../services/portfolio_service.dart';
 import '../../widgets/portfolio_tab.dart';
 import '../../widgets/goals_tab.dart';
 import '../../widgets/share_tracker_tab.dart';
@@ -15,7 +14,7 @@ class TabbedDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authService = context.watch<AuthService>();
+    context.watch<AuthService>();
 
     return DefaultTabController(
       length: 5,

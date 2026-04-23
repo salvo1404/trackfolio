@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../models/budget.dart';
 import '../services/portfolio_service.dart';
 import '../services/auth_service.dart';
@@ -28,8 +27,8 @@ class BudgetsTab extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Theme.of(context).colorScheme.primary.withOpacity(0.02),
-            Theme.of(context).colorScheme.secondary.withOpacity(0.02),
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.02),
+            Theme.of(context).colorScheme.secondary.withValues(alpha: 0.02),
           ],
         ),
       ),
@@ -43,7 +42,7 @@ class BudgetsTab extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Theme.of(
                         context,
-                      ).colorScheme.primary.withOpacity(0.1),
+                      ).colorScheme.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(

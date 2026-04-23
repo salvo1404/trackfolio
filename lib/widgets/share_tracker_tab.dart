@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../models/share_transaction.dart';
 import '../models/portfolio_item.dart';
 import '../services/portfolio_service.dart';
 import '../services/auth_service.dart';
@@ -34,8 +33,8 @@ class _ShareTrackerTabState extends State<ShareTrackerTab> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Theme.of(context).colorScheme.primary.withOpacity(0.02),
-            Theme.of(context).colorScheme.secondary.withOpacity(0.02),
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.02),
+            Theme.of(context).colorScheme.secondary.withValues(alpha: 0.02),
           ],
         ),
       ),
@@ -47,7 +46,7 @@ class _ShareTrackerTabState extends State<ShareTrackerTab> {
                   Container(
                     padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -299,7 +298,7 @@ class _ShareTrackerTabState extends State<ShareTrackerTab> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
@@ -780,7 +779,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
                 border: Border.all(color: Theme.of(context).colorScheme.outline),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -1642,8 +1641,8 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.02),
-              Theme.of(context).colorScheme.secondary.withOpacity(0.02),
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.02),
+              Theme.of(context).colorScheme.secondary.withValues(alpha: 0.02),
             ],
           ),
         ),
@@ -1664,7 +1663,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
                         gradient: LinearGradient(
                           colors: [
                             Theme.of(context).colorScheme.primary,
-                            Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                            Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(16),

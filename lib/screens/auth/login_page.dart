@@ -116,8 +116,8 @@ class _LoginPageState extends State<LoginPage> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.05),
-              Theme.of(context).colorScheme.secondary.withOpacity(0.05),
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+              Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
             ],
           ),
         ),
@@ -147,7 +147,7 @@ class _LoginPageState extends State<LoginPage> {
                               gradient: LinearGradient(
                                 colors: [
                                   Theme.of(context).colorScheme.primary,
-                                  Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(20),

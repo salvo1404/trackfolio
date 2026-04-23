@@ -27,8 +27,8 @@ class PortfolioTab extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Theme.of(context).colorScheme.primary.withOpacity(0.02),
-            Theme.of(context).colorScheme.secondary.withOpacity(0.02),
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.02),
+            Theme.of(context).colorScheme.secondary.withValues(alpha: 0.02),
           ],
         ),
       ),
@@ -56,12 +56,12 @@ class PortfolioTab extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Theme.of(
                         context,
-                      ).colorScheme.primary.withOpacity(0.1),
+                      ).colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
                         color: Theme.of(
                           context,
-                        ).colorScheme.primary.withOpacity(0.3),
+                        ).colorScheme.primary.withValues(alpha: 0.3),
                         width: 1,
                       ),
                     ),
@@ -113,7 +113,7 @@ class PortfolioTab extends StatelessWidget {
                       portfolioService.priceRefreshStatus ?? 'Updating prices...',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -224,7 +224,7 @@ class PortfolioTab extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: Theme.of(
                                 context,
-                              ).colorScheme.primary.withOpacity(0.1),
+                              ).colorScheme.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -276,12 +276,12 @@ class PortfolioTab extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Theme.of(
                         context,
-                      ).colorScheme.primary.withOpacity(0.1),
+                      ).colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
                         color: Theme.of(
                           context,
-                        ).colorScheme.primary.withOpacity(0.3),
+                        ).colorScheme.primary.withValues(alpha: 0.3),
                         width: 1,
                       ),
                     ),
@@ -337,7 +337,7 @@ class PortfolioTab extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Theme.of(
                         context,
-                      ).colorScheme.primary.withOpacity(0.1),
+                      ).colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -399,7 +399,7 @@ class PortfolioTab extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Theme.of(
                         context,
-                      ).colorScheme.primary.withOpacity(0.1),
+                      ).colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -758,7 +758,7 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
                     decoration: BoxDecoration(
                       color: AppTheme.getPortfolioTypeColor(
                         widget.type,
-                      ).withOpacity(0.1),
+                      ).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -804,7 +804,7 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: gainLossColor.withOpacity(0.1),
+                          color: gainLossColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -901,7 +901,7 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
                                       vertical: 1,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: itemGainLossColor.withOpacity(0.1),
+                                      color: itemGainLossColor.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
