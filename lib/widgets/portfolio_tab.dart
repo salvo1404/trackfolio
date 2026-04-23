@@ -1049,8 +1049,8 @@ class _PortfolioValueChartState extends State<_PortfolioValueChart> {
       if (!typeOrder.contains(item.type)) typeOrder.add(item.type);
     }
 
-    // Build cumulative value per type at each timeline point
-    final Map<String, List<FlSpot>> typeSpots = {
+    // Build per-type cumulative value (unstacked) at each timeline point
+    final Map<String, List<double>> typeValues = {
       for (final type in typeOrder) type: [],
     };
     final Map<String, double> runningTotals = {
@@ -1067,7 +1067,7 @@ class _PortfolioValueChartState extends State<_PortfolioValueChart> {
       runningTotals[item.type] = runningTotals[item.type]! + valueUsd;
 
       for (final type in typeOrder) {
-        typeSpots[type]!.add(FlSpot(i.toDouble(), runningTotals[type]!));
+        typeValues[type]!.add(runningTotals[type]!);
       }
     }
 
@@ -1075,29 +1075,50 @@ class _PortfolioValueChartState extends State<_PortfolioValueChart> {
     final visibleTypes =
         typeOrder.where((t) => !_hiddenTypes.contains(t)).toList();
 
+    // Build stacked spots: each type sits on top of the ones below it
+    // Draw order is reversed (top type first) so areas layer correctly
+    final Map<String, List<FlSpot>> stackedSpots = {};
+    final Map<String, List<double>> rawValues = {};
+
+    for (int i = 0; i < items.length; i++) {
+      double stackBase = 0;
+      for (int t = 0; t < visibleTypes.length; t++) {
+        final type = visibleTypes[t];
+        final ownValue = typeValues[type]![i];
+        rawValues.putIfAbsent(type, () => []);
+        rawValues[type]!.add(ownValue);
+        stackedSpots.putIfAbsent(type, () => []);
+        stackedSpots[type]!.add(FlSpot(i.toDouble(), stackBase + ownValue));
+        stackBase += ownValue;
+      }
+    }
+
     double maxY = 0;
     for (final type in visibleTypes) {
-      maxY = math.max(maxY, runningTotals[type]!);
+      for (final spot in stackedSpots[type]!) {
+        maxY = math.max(maxY, spot.y);
+      }
     }
     final chartMax = maxY == 0 ? 100.0 : maxY * 1.15;
 
-    // Build line data for visible types only
+    // Build lines in reverse order so the highest stack renders behind
     final lineBars = <LineChartBarData>[];
-    for (final type in visibleTypes) {
+    for (int t = visibleTypes.length - 1; t >= 0; t--) {
+      final type = visibleTypes[t];
       final color = AppTheme.getPortfolioTypeColor(type);
       lineBars.add(
         LineChartBarData(
-          spots: typeSpots[type]!,
+          spots: stackedSpots[type]!,
           isCurved: true,
           curveSmoothness: 0.3,
           color: color,
-          barWidth: 3,
+          barWidth: 2.5,
           isStrokeCapRound: true,
           dotData: FlDotData(
             show: true,
             getDotPainter: (spot, percent, barData, index) {
               return FlDotCirclePainter(
-                radius: 3.5,
+                radius: 3,
                 color: Colors.white,
                 strokeWidth: 2,
                 strokeColor: color,
@@ -1110,14 +1131,16 @@ class _PortfolioValueChartState extends State<_PortfolioValueChart> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                color.withValues(alpha: 0.2),
-                color.withValues(alpha: 0.02),
+                color.withValues(alpha: 0.35),
+                color.withValues(alpha: 0.08),
               ],
             ),
           ),
         ),
       );
     }
+    // Reverse the visible types list to match the reversed lineBars order
+    final tooltipTypes = visibleTypes.reversed.toList();
 
     return Card(
       elevation: 4,
@@ -1240,11 +1263,14 @@ class _PortfolioValueChartState extends State<_PortfolioValueChart> {
                             tooltipRoundedRadius: 8,
                             getTooltipItems: (touchedSpots) {
                               return touchedSpots.map((spot) {
-                                final type = visibleTypes[spot.barIndex];
+                                final type = tooltipTypes[spot.barIndex];
                                 final color =
                                     AppTheme.getPortfolioTypeColor(type);
+                                final pointIndex = spot.x.toInt();
+                                final ownValue =
+                                    rawValues[type]![pointIndex];
                                 return LineTooltipItem(
-                                  '$type\n${currencyFormatter.format(spot.y)}',
+                                  '$type\n${currencyFormatter.format(ownValue)}',
                                   TextStyle(
                                     color: color,
                                     fontSize: 11,
