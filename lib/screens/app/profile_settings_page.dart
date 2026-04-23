@@ -224,7 +224,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedCountry,
+                initialValue: _selectedCountry,
                 decoration: const InputDecoration(
                   labelText: 'Country',
                   prefixIcon: Icon(Icons.flag_outlined),
@@ -242,7 +242,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedCurrency,
+                initialValue: _selectedCurrency,
                 decoration: const InputDecoration(
                   labelText: 'Default Currency',
                   prefixIcon: Icon(Icons.attach_money),

@@ -292,7 +292,7 @@ class _ProfileDrawerState extends State<_ProfileDrawer> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: user?.country,
+                  initialValue: user?.country,
                   decoration: InputDecoration(
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -349,7 +349,7 @@ class _ProfileDrawerState extends State<_ProfileDrawer> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: user?.currency ?? 'USD',
+                  initialValue: user?.currency ?? 'USD',
                   decoration: InputDecoration(
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 12,

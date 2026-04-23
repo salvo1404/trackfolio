@@ -790,7 +790,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
                 shrinkWrap: true,
                 padding: EdgeInsets.zero,
                 itemCount: _searchResults.length,
-                separatorBuilder: (_, __) => Divider(
+                separatorBuilder: (_, _) => Divider(
                   height: 1,
                   color: Theme.of(context).dividerColor,
                 ),
@@ -1713,7 +1713,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
                       ),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
-                        value: _type,
+                        initialValue: _type,
                         decoration: InputDecoration(
                           hintText: 'Select asset type',
                           prefixIcon: Icon(
@@ -1765,7 +1765,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
                       ),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
-                        value: _currency,
+                        initialValue: _currency,
                         decoration: InputDecoration(
                           hintText: 'Select currency',
                           prefixIcon: Icon(

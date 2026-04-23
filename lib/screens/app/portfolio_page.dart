@@ -263,7 +263,7 @@ class _PortfolioItemDialogState extends State<_PortfolioItemDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<String>(
-                value: _type,
+                initialValue: _type,
                 decoration: const InputDecoration(labelText: 'Type'),
                 items: AppConstants.portfolioTypes
                     .map((type) => DropdownMenuItem(

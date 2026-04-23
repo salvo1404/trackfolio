@@ -372,7 +372,7 @@ class _GoalDialogState extends State<_GoalDialog> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _category,
+                initialValue: _category,
                 decoration: const InputDecoration(labelText: 'Category'),
                 items: AppConstants.goalCategories
                     .map((cat) => DropdownMenuItem(

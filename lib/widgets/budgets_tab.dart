@@ -338,7 +338,7 @@ class _BudgetDialogState extends State<_BudgetDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<String>(
-                value: _category,
+                initialValue: _category,
                 decoration: const InputDecoration(labelText: 'Category'),
                 items: AppConstants.budgetCategories
                     .map(
@@ -351,7 +351,7 @@ class _BudgetDialogState extends State<_BudgetDialog> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _period,
+                initialValue: _period,
                 decoration: const InputDecoration(labelText: 'Period'),
                 items: ['monthly', 'quarterly', 'yearly']
                     .map(
