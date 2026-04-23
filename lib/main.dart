@@ -9,6 +9,7 @@ import 'services/portfolio_service.dart';
 import 'services/currency_service.dart';
 import 'services/theme_service.dart';
 import 'services/firestore_service.dart';
+import 'services/stock_api_service.dart';
 import 'screens/landing/landing_page.dart';
 import 'screens/auth/login_page.dart';
 import 'screens/auth/register_page.dart';
@@ -43,6 +44,9 @@ class TrackfolioApp extends StatelessWidget {
         Provider(
           create: (_) => FirestoreService(),
         ),
+        Provider(
+          create: (_) => StockApiService(),
+        ),
         ChangeNotifierProvider(
           create: (_) => AuthService(),
         ),
@@ -53,6 +57,7 @@ class TrackfolioApp extends StatelessWidget {
           create: (context) => PortfolioService(
             context.read<FirestoreService>(),
             context.read<CurrencyService>(),
+            context.read<StockApiService>(),
             context.read<AuthService>(),
           ),
           update: (context, authService, previous) {
@@ -60,6 +65,7 @@ class TrackfolioApp extends StatelessWidget {
               return PortfolioService(
                 context.read<FirestoreService>(),
                 context.read<CurrencyService>(),
+                context.read<StockApiService>(),
                 authService,
               );
             }

@@ -6,6 +6,37 @@ class StockApiService {
   // Get a free API key at: https://www.alphavantage.co/support/#api-key
   static const String _apiKey = String.fromEnvironment('ALPHA_VANTAGE_KEY', defaultValue: '');
   static const String _baseUrl = 'https://www.alphavantage.co/query';
+  static const String _coingeckoUrl = 'https://api.coingecko.com/api/v3';
+
+  static const Map<String, String> _cryptoSymbolToId = {
+    'BTC': 'bitcoin',
+    'ETH': 'ethereum',
+    'SOL': 'solana',
+    'ADA': 'cardano',
+    'DOT': 'polkadot',
+    'DOGE': 'dogecoin',
+    'XRP': 'ripple',
+    'AVAX': 'avalanche-2',
+    'MATIC': 'matic-network',
+    'LINK': 'chainlink',
+    'UNI': 'uniswap',
+    'ATOM': 'cosmos',
+    'LTC': 'litecoin',
+    'BNB': 'binancecoin',
+    'SHIB': 'shiba-inu',
+    'ARB': 'arbitrum',
+    'OP': 'optimism',
+    'APT': 'aptos',
+    'SUI': 'sui',
+    'NEAR': 'near',
+    'FIL': 'filecoin',
+    'AAVE': 'aave',
+    'MKR': 'maker',
+    'CRO': 'crypto-com-chain',
+    'ALGO': 'algorand',
+    'XLM': 'stellar',
+    'PEPE': 'pepe',
+  };
 
   /// Lookup stock/ETF by symbol and get current price.
   /// Supports international symbols like VUAA.LON, DHER.DEX, etc.
@@ -92,6 +123,45 @@ class StockApiService {
     } catch (e) {
       print('Error searching symbols: $e');
       return [];
+    }
+  }
+
+  String _resolveCryptoId(String symbol) {
+    final upper = symbol.toUpperCase().trim();
+    return _cryptoSymbolToId[upper] ?? symbol.toLowerCase().trim();
+  }
+
+  /// Fetch current prices for multiple crypto assets in one request.
+  /// [symbols] can be ticker symbols (BTC, ETH) or CoinGecko IDs (bitcoin).
+  /// Returns a map of original symbol → price in USD.
+  Future<Map<String, double>> lookupCryptoPrices(List<String> symbols) async {
+    if (symbols.isEmpty) return {};
+    try {
+      final ids = symbols.map(_resolveCryptoId).toList();
+      final idsParam = ids.join(',');
+      final uri = Uri.parse(
+        '$_coingeckoUrl/simple/price?ids=$idsParam&vs_currencies=usd',
+      );
+
+      final response = await http.get(uri).timeout(
+        const Duration(seconds: 10),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final Map<String, double> result = {};
+        for (int i = 0; i < symbols.length; i++) {
+          final id = ids[i];
+          if (data.containsKey(id) && data[id]['usd'] != null) {
+            result[symbols[i]] = (data[id]['usd'] as num).toDouble();
+          }
+        }
+        return result;
+      }
+      return {};
+    } catch (e) {
+      print('Error fetching crypto prices: $e');
+      return {};
     }
   }
 }

@@ -5,21 +5,29 @@ import '../models/budget.dart';
 import '../models/transaction.dart';
 import '../models/goal.dart';
 import '../models/share_transaction.dart';
+import '../utils/constants.dart';
 import 'firestore_service.dart';
 import 'currency_service.dart';
 import 'auth_service.dart';
+import 'stock_api_service.dart';
 
 class PortfolioService extends ChangeNotifier {
   final FirestoreService _firestore;
   final CurrencyService _currencyService;
+  final StockApiService _stockApi;
   String? _uid;
   List<PortfolioItem> _portfolioItems = [];
   List<Budget> _budgets = [];
   List<Transaction> _transactions = [];
   List<Goal> _goals = [];
   List<ShareTransaction> _shareTransactions = [];
+  bool _isRefreshingPrices = false;
+  String? _priceRefreshStatus;
 
-  PortfolioService(this._firestore, this._currencyService, AuthService authService) {
+  bool get isRefreshingPrices => _isRefreshingPrices;
+  String? get priceRefreshStatus => _priceRefreshStatus;
+
+  PortfolioService(this._firestore, this._currencyService, this._stockApi, AuthService authService) {
     _uid = authService.uid;
     if (_uid != null) loadData();
   }
@@ -96,6 +104,85 @@ class PortfolioService extends ChangeNotifier {
     _transactions = await _firestore.getTransactions(uid);
     _goals = await _firestore.getGoals(uid);
     _shareTransactions = await _firestore.getShareTransactions(uid);
+    notifyListeners();
+
+    // Refresh prices in the background after data is loaded
+    refreshPrices();
+  }
+
+  Future<void> refreshPrices() async {
+    final uid = _uid;
+    if (uid == null) return;
+
+    final priceable = _portfolioItems.where((item) =>
+      item.symbol != null &&
+      item.symbol!.isNotEmpty &&
+      item.dateSold == null &&
+      (item.type == AppConstants.typeStocksAndETFs || item.type == AppConstants.typeCrypto),
+    ).toList();
+
+    if (priceable.isEmpty) return;
+
+    _isRefreshingPrices = true;
+    _priceRefreshStatus = 'Updating values...';
+    notifyListeners();
+
+    int updated = 0;
+
+    // Batch crypto lookups (CoinGecko supports multi-ID queries)
+    final cryptoItems = priceable.where((i) => i.type == AppConstants.typeCrypto).toList();
+    if (cryptoItems.isNotEmpty) {
+      final symbols = cryptoItems.map((i) => i.symbol!).toList();
+      final prices = await _stockApi.lookupCryptoPrices(symbols);
+      for (final item in cryptoItems) {
+        final price = prices[item.symbol!];
+        if (price != null && price != item.currentValue) {
+          final updatedItem = item.copyWith(
+            currentValue: price,
+            lastUpdated: DateTime.now(),
+          );
+          final index = _portfolioItems.indexWhere((i) => i.id == item.id);
+          if (index != -1) {
+            _portfolioItems[index] = updatedItem;
+            await _firestore.setPortfolioItem(uid, updatedItem);
+            updated++;
+          }
+        }
+      }
+    }
+
+    // Fetch stock/ETF prices sequentially (Alpha Vantage rate limits)
+    final stockItems = priceable.where((i) => i.type == AppConstants.typeStocksAndETFs).toList();
+    for (final item in stockItems) {
+      try {
+        final result = await _stockApi.lookupStock(item.symbol!);
+        if (result != null && result['price'] != null) {
+          final price = (result['price'] as num).toDouble();
+          if (price > 0 && price != item.currentValue) {
+            final updatedItem = item.copyWith(
+              currentValue: price,
+              lastUpdated: DateTime.now(),
+            );
+            final index = _portfolioItems.indexWhere((i) => i.id == item.id);
+            if (index != -1) {
+              _portfolioItems[index] = updatedItem;
+              await _firestore.setPortfolioItem(uid, updatedItem);
+              updated++;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    _isRefreshingPrices = false;
+    _priceRefreshStatus = updated > 0
+        ? '$updated price${updated == 1 ? '' : 's'} updated'
+        : 'values are up to date';
+    notifyListeners();
+
+    // Clear the status message after a few seconds
+    await Future.delayed(const Duration(seconds: 4));
+    _priceRefreshStatus = null;
     notifyListeners();
   }
 

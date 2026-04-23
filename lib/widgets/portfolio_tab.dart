@@ -88,6 +88,38 @@ class PortfolioTab extends StatelessWidget {
                   ),
                 ],
               ),
+              if (portfolioService.isRefreshingPrices || portfolioService.priceRefreshStatus != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (portfolioService.isRefreshingPrices) ...[
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ] else ...[
+                      Icon(
+                        Icons.check_circle_outline,
+                        size: 14,
+                        color: Colors.green[600],
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      portfolioService.priceRefreshStatus ?? 'Updating prices...',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 16),
               LayoutBuilder(
                 builder: (context, constraints) {
