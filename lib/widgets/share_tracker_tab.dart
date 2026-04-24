@@ -521,7 +521,7 @@ class PortfolioItemDialog extends StatefulWidget {
 
 class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _stockApiService = StockApiService();
+  late final StockApiService _stockApiService;
   late String _type;
   late String _currency;
   late TextEditingController _nameController;
@@ -547,6 +547,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
   @override
   void initState() {
     super.initState();
+    _stockApiService = context.read<StockApiService>();
     _type = widget.item?.type ?? AppConstants.portfolioTypes.first;
     _currency = widget.item?.currency ?? 'USD';
     _nameController = TextEditingController(text: widget.item?.name ?? '');
@@ -794,7 +795,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
             ),
             textCapitalization: TextCapitalization.characters,
             onChanged: (value) {
-              if (value.length >= 2) {
+              if (value.length >= 3) {
                 _searchSymbols(value);
               } else {
                 setState(() {
