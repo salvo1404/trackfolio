@@ -2,12 +2,21 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+class _CacheEntry<T> {
+  final T value;
+  final DateTime timestamp;
+  _CacheEntry(this.value) : timestamp = DateTime.now();
+  bool get isExpired => DateTime.now().difference(timestamp).inMinutes >= 60;
+}
+
 class StockApiService {
-  // Pass via: flutter run --dart-define=ALPHA_VANTAGE_KEY=your_key
-  // Get a free API key at: https://www.alphavantage.co/support/#api-key
   static const String _apiKey = String.fromEnvironment('ALPHA_VANTAGE_KEY', defaultValue: '');
   static const String _baseUrl = 'https://www.alphavantage.co/query';
   static const String _coingeckoUrl = 'https://api.coingecko.com/api/v3';
+
+  final Map<String, _CacheEntry<Map<String, dynamic>?>> _stockCache = {};
+  final Map<String, _CacheEntry<double>> _cryptoCache = {};
+  DateTime? _lastAlphaVantageCall;
 
   static const Map<String, String> _cryptoSymbolToId = {
     'BTC': 'bitcoin',
@@ -44,7 +53,13 @@ class StockApiService {
   /// Returns a map with 'symbol', 'name', and 'price' if successful.
   /// Returns null if the symbol is not found or there's an error.
   Future<Map<String, dynamic>?> lookupStock(String symbol) async {
+    final cached = _stockCache[symbol];
+    if (cached != null && !cached.isExpired) {
+      return cached.value;
+    }
+
     try {
+      await _throttleAlphaVantage();
       final uri = Uri.parse(
         '$_baseUrl?function=GLOBAL_QUOTE&symbol=$symbol&apikey=$_apiKey',
       );
@@ -63,6 +78,7 @@ class StockApiService {
           final quote = data['Global Quote'] as Map<String, dynamic>;
 
           if (quote.isEmpty) {
+            _stockCache[symbol] = _CacheEntry(null);
             return null;
           }
 
@@ -70,11 +86,13 @@ class StockApiService {
           final symbolName = quote['01. symbol'];
 
           if (price != null && symbolName != null) {
-            return {
+            final result = {
               'symbol': symbolName,
               'price': double.tryParse(price.toString()) ?? 0.0,
               'name': symbolName,
             };
+            _stockCache[symbol] = _CacheEntry(result);
+            return result;
           }
         }
 
@@ -95,6 +113,7 @@ class StockApiService {
   /// Supports ETFs, equities, and international exchanges.
   Future<List<Map<String, String>>> searchSymbols(String keyword) async {
     try {
+      await _throttleAlphaVantage();
       final uri = Uri.parse(
         '$_baseUrl?function=SYMBOL_SEARCH&keywords=$keyword&apikey=$_apiKey',
       );
@@ -127,6 +146,16 @@ class StockApiService {
     }
   }
 
+  Future<void> _throttleAlphaVantage() async {
+    if (_lastAlphaVantageCall != null) {
+      final elapsed = DateTime.now().difference(_lastAlphaVantageCall!);
+      if (elapsed < const Duration(seconds: 2)) {
+        await Future.delayed(const Duration(seconds: 2) - elapsed);
+      }
+    }
+    _lastAlphaVantageCall = DateTime.now();
+  }
+
   String _resolveCryptoId(String symbol) {
     final upper = symbol.toUpperCase().trim();
     return _cryptoSymbolToId[upper] ?? symbol.toLowerCase().trim();
@@ -137,8 +166,23 @@ class StockApiService {
   /// Returns a map of original symbol → price in USD.
   Future<Map<String, double>> lookupCryptoPrices(List<String> symbols) async {
     if (symbols.isEmpty) return {};
+
+    final Map<String, double> result = {};
+    final List<String> uncached = [];
+
+    for (final symbol in symbols) {
+      final cached = _cryptoCache[symbol];
+      if (cached != null && !cached.isExpired) {
+        result[symbol] = cached.value;
+      } else {
+        uncached.add(symbol);
+      }
+    }
+
+    if (uncached.isEmpty) return result;
+
     try {
-      final ids = symbols.map(_resolveCryptoId).toList();
+      final ids = uncached.map(_resolveCryptoId).toList();
       final idsParam = ids.join(',');
       final uri = Uri.parse(
         '$_coingeckoUrl/simple/price?ids=$idsParam&vs_currencies=usd',
@@ -150,19 +194,19 @@ class StockApiService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final Map<String, double> result = {};
-        for (int i = 0; i < symbols.length; i++) {
+        for (int i = 0; i < uncached.length; i++) {
           final id = ids[i];
           if (data.containsKey(id) && data[id]['usd'] != null) {
-            result[symbols[i]] = (data[id]['usd'] as num).toDouble();
+            final price = (data[id]['usd'] as num).toDouble();
+            result[uncached[i]] = price;
+            _cryptoCache[uncached[i]] = _CacheEntry(price);
           }
         }
-        return result;
       }
-      return {};
+      return result;
     } catch (e) {
       debugPrint('Error fetching crypto prices: $e');
-      return {};
+      return result;
     }
   }
 }

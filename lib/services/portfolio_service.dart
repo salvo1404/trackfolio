@@ -112,7 +112,7 @@ class PortfolioService extends ChangeNotifier {
 
   Future<void> refreshPrices() async {
     final uid = _uid;
-    if (uid == null) return;
+    if (uid == null || _isRefreshingPrices) return;
 
     final priceable = _portfolioItems.where((item) =>
       item.symbol != null &&
@@ -151,27 +151,33 @@ class PortfolioService extends ChangeNotifier {
       }
     }
 
-    // Fetch stock/ETF prices sequentially (Alpha Vantage rate limits)
+    // Fetch stock/ETF prices — one API call per unique symbol
     final stockItems = priceable.where((i) => i.type == AppConstants.typeStocksAndETFs).toList();
-    for (final item in stockItems) {
+    final uniqueSymbols = stockItems.map((i) => i.symbol!).toSet();
+    final Map<String, double> stockPrices = {};
+    for (final symbol in uniqueSymbols) {
       try {
-        final result = await _stockApi.lookupStock(item.symbol!);
+        final result = await _stockApi.lookupStock(symbol);
         if (result != null && result['price'] != null) {
           final price = (result['price'] as num).toDouble();
-          if (price > 0 && price != item.currentValue) {
-            final updatedItem = item.copyWith(
-              currentValue: price,
-              lastUpdated: DateTime.now(),
-            );
-            final index = _portfolioItems.indexWhere((i) => i.id == item.id);
-            if (index != -1) {
-              _portfolioItems[index] = updatedItem;
-              await _firestore.setPortfolioItem(uid, updatedItem);
-              updated++;
-            }
-          }
+          if (price > 0) stockPrices[symbol] = price;
         }
       } catch (_) {}
+    }
+    for (final item in stockItems) {
+      final price = stockPrices[item.symbol!];
+      if (price != null && price != item.currentValue) {
+        final updatedItem = item.copyWith(
+          currentValue: price,
+          lastUpdated: DateTime.now(),
+        );
+        final index = _portfolioItems.indexWhere((i) => i.id == item.id);
+        if (index != -1) {
+          _portfolioItems[index] = updatedItem;
+          await _firestore.setPortfolioItem(uid, updatedItem);
+          updated++;
+        }
+      }
     }
 
     _isRefreshingPrices = false;
