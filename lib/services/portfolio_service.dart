@@ -22,6 +22,7 @@ class PortfolioService extends ChangeNotifier {
   List<Goal> _goals = [];
   List<ShareTransaction> _shareTransactions = [];
   bool _isRefreshingPrices = false;
+  bool _isLoadingData = false;
   String? _priceRefreshStatus;
 
   bool get isRefreshingPrices => _isRefreshingPrices;
@@ -97,16 +98,26 @@ class PortfolioService extends ChangeNotifier {
 
   Future<void> loadData() async {
     final uid = _uid ?? firebase_auth.FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+    if (uid == null || _isLoadingData) return;
     _uid = uid;
-    _portfolioItems = await _firestore.getPortfolioItems(uid);
-    _budgets = await _firestore.getBudgets(uid);
-    _transactions = await _firestore.getTransactions(uid);
-    _goals = await _firestore.getGoals(uid);
-    _shareTransactions = await _firestore.getShareTransactions(uid);
+    _isLoadingData = true;
+
+    final results = await Future.wait([
+      _firestore.getPortfolioItems(uid),
+      _firestore.getBudgets(uid),
+      _firestore.getTransactions(uid),
+      _firestore.getGoals(uid),
+      _firestore.getShareTransactions(uid),
+    ]);
+
+    _portfolioItems = results[0] as List<PortfolioItem>;
+    _budgets = results[1] as List<Budget>;
+    _transactions = results[2] as List<Transaction>;
+    _goals = results[3] as List<Goal>;
+    _shareTransactions = results[4] as List<ShareTransaction>;
+    _isLoadingData = false;
     notifyListeners();
 
-    // Refresh prices in the background after data is loaded
     refreshPrices();
   }
 

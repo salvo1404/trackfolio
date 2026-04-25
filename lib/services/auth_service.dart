@@ -28,15 +28,17 @@ class AuthService extends ChangeNotifier {
 
   Future<void> _onAuthChanged(firebase_auth.User? firebaseUser) async {
     if (firebaseUser != null) {
-      final profileData = await _firestore.getUserProfile(firebaseUser.uid);
-      if (profileData != null) {
-        _currentUser = User.fromJson(profileData);
-      } else {
-        _currentUser = User(
-          uid: firebaseUser.uid,
-          email: firebaseUser.email ?? '',
-          createdAt: DateTime.now(),
-        );
+      if (_currentUser == null || _currentUser!.uid != firebaseUser.uid) {
+        final profileData = await _firestore.getUserProfile(firebaseUser.uid);
+        if (profileData != null) {
+          _currentUser = User.fromJson(profileData);
+        } else {
+          _currentUser = User(
+            uid: firebaseUser.uid,
+            email: firebaseUser.email ?? '',
+            createdAt: DateTime.now(),
+          );
+        }
       }
       _isLoggedIn = true;
     } else {

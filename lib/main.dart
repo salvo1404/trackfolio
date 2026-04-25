@@ -136,15 +136,6 @@ class _ProtectedRoute extends StatefulWidget {
 
 class _ProtectedRouteState extends State<_ProtectedRoute> {
   @override
-  void initState() {
-    super.initState();
-    // Load portfolio data once this widget is mounted
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PortfolioService>().loadData();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
 

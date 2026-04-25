@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
-import '../../services/portfolio_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/theme.dart';
 
@@ -37,7 +36,6 @@ class _LoginPageState extends State<LoginPage> {
 
     // Capture references before async gap
     final authService = context.read<AuthService>();
-    final portfolioService = context.read<PortfolioService>();
 
     final result = await authService.login(
       email: _emailController.text.trim(),
@@ -47,8 +45,6 @@ class _LoginPageState extends State<LoginPage> {
     if (!mounted) return;
 
     if (result.success) {
-      await portfolioService.loadData();
-      if (!mounted) return;
       Navigator.of(context).pushReplacementNamed('/dashboard');
     } else {
       setState(() => _isLoading = false);
@@ -76,15 +72,12 @@ class _LoginPageState extends State<LoginPage> {
 
     // Capture references before async gap
     final authService = context.read<AuthService>();
-    final portfolioService = context.read<PortfolioService>();
 
     final result = await authService.loginDemo();
 
     if (!mounted) return;
 
     if (result.success) {
-      await portfolioService.loadData();
-      if (!mounted) return;
       Navigator.of(context).pushReplacementNamed('/dashboard');
     } else {
       setState(() => _isLoading = false);
