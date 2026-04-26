@@ -280,7 +280,10 @@ class _BudgetDialogState extends State<_BudgetDialog> {
   @override
   void initState() {
     super.initState();
-    _category = widget.budget?.category ?? AppConstants.budgetCategories.first;
+    final budgetCategory = widget.budget?.category;
+    _category = (budgetCategory != null && AppConstants.budgetCategories.contains(budgetCategory))
+        ? budgetCategory
+        : AppConstants.budgetCategories.first;
     _period = widget.budget?.period ?? 'monthly';
     _amountController = TextEditingController(
       text: widget.budget?.amount.toString() ?? '',
@@ -326,72 +329,280 @@ class _BudgetDialogState extends State<_BudgetDialog> {
     }
   }
 
+  InputDecoration _inputDecoration(
+    BuildContext context, {
+    required String hintText,
+    required IconData icon,
+  }) {
+    return InputDecoration(
+      hintText: hintText,
+      prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.primary),
+      filled: true,
+      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: Theme.of(context).colorScheme.primary,
+          width: 2,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: Colors.grey[700],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.budget == null ? 'Add Budget' : 'Edit Budget'),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                initialValue: _category,
-                decoration: const InputDecoration(labelText: 'Category'),
-                items: AppConstants.budgetCategories
-                    .map(
-                      (cat) => DropdownMenuItem(value: cat, child: Text(cat)),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) setState(() => _category = value);
-                },
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _period,
-                decoration: const InputDecoration(labelText: 'Period'),
-                items: ['monthly', 'quarterly', 'yearly']
-                    .map(
-                      (period) =>
-                          DropdownMenuItem(value: period, child: Text(period)),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) setState(() => _period = value);
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _amountController,
-                decoration: const InputDecoration(labelText: 'Budget Amount'),
-                keyboardType: TextInputType.number,
-                validator: (v) => v?.isEmpty == true ? 'Required' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _spentController,
-                decoration: const InputDecoration(labelText: 'Spent'),
-                keyboardType: TextInputType.number,
-                validator: (v) => v?.isEmpty == true ? 'Required' : null,
-              ),
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
+      elevation: 8,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.02),
+              Theme.of(context).colorScheme.secondary.withValues(alpha: 0.02),
             ],
           ),
         ),
-      ),
-      actions: [
-        if (widget.budget != null)
-          TextButton(
-            onPressed: _delete,
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Theme.of(context).colorScheme.primary,
+                            Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        widget.budget == null
+                            ? Icons.account_balance_outlined
+                            : Icons.edit_outlined,
+                        size: 32,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    widget.budget == null ? 'Add New Budget' : 'Edit Budget',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.budget == null
+                        ? 'Set a spending budget for a category'
+                        : 'Update budget details',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Category
+                  _buildLabel('Category'),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: _category,
+                    decoration: _inputDecoration(
+                      context,
+                      hintText: 'Select category',
+                      icon: Icons.category_outlined,
+                    ),
+                    items: AppConstants.budgetCategories
+                        .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) setState(() => _category = value);
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Period
+                  _buildLabel('Period'),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: _period,
+                    decoration: _inputDecoration(
+                      context,
+                      hintText: 'Select period',
+                      icon: Icons.calendar_month,
+                    ),
+                    items: ['monthly', 'quarterly', 'yearly']
+                        .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) setState(() => _period = value);
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Budget Amount
+                  _buildLabel('Budget Amount'),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _amountController,
+                    decoration: _inputDecoration(
+                      context,
+                      hintText: 'Enter budget amount',
+                      icon: Icons.attach_money,
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (v) => v?.isEmpty == true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Spent
+                  _buildLabel('Spent'),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _spentController,
+                    decoration: _inputDecoration(
+                      context,
+                      hintText: 'Amount spent so far',
+                      icon: Icons.shopping_cart_outlined,
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (v) => v?.isEmpty == true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Divider
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: Theme.of(context).dividerColor)),
+                      if (widget.budget != null) ...[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'ACTIONS',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Expanded(child: Divider(color: Theme.of(context).dividerColor)),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Action Buttons
+                  if (widget.budget != null) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _delete,
+                        icon: const Icon(Icons.delete_outline, size: 18),
+                        label: const Text('Delete'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          side: const BorderSide(color: Colors.red),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            side: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: FilledButton.icon(
+                          onPressed: _save,
+                          icon: Icon(
+                            widget.budget == null
+                                ? Icons.add_circle_outline
+                                : Icons.save_rounded,
+                            size: 20,
+                          ),
+                          label: Text(
+                            widget.budget == null ? 'Add Budget' : 'Save',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
         ),
-        ElevatedButton(onPressed: _save, child: const Text('Save')),
-      ],
+      ),
     );
   }
 }

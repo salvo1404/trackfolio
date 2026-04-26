@@ -4,26 +4,41 @@ class Goal {
   final String id;
   final String title;
   final String description;
-  final double targetAmount;
-  final double currentAmount;
+  final Map<String, double> targets;
   final DateTime targetDate;
-  final String category;
   final DateTime createdAt;
 
   Goal({
     required this.id,
     required this.title,
     required this.description,
-    required this.targetAmount,
-    required this.currentAmount,
+    required this.targets,
     required this.targetDate,
-    required this.category,
     required this.createdAt,
   });
 
-  double get progress => targetAmount > 0 ? (currentAmount / targetAmount) * 100 : 0;
-  double get remaining => targetAmount - currentAmount;
-  bool get isCompleted => currentAmount >= targetAmount;
+  double get targetAmount => targets.values.fold(0.0, (sum, v) => sum + v);
+
+  double currentAmount(Map<String, double> portfolioByType) {
+    double total = 0;
+    for (final type in targets.keys) {
+      total += portfolioByType[type] ?? 0;
+    }
+    return total;
+  }
+
+  double progress(Map<String, double> portfolioByType) {
+    final target = targetAmount;
+    if (target <= 0) return 0;
+    return (currentAmount(portfolioByType) / target) * 100;
+  }
+
+  double remaining(Map<String, double> portfolioByType) =>
+      targetAmount - currentAmount(portfolioByType);
+
+  bool isCompleted(Map<String, double> portfolioByType) =>
+      currentAmount(portfolioByType) >= targetAmount;
+
   int get daysRemaining => targetDate.difference(DateTime.now()).inDays;
 
   Map<String, dynamic> toJson() {
@@ -31,23 +46,28 @@ class Goal {
       'id': id,
       'title': title,
       'description': description,
-      'targetAmount': targetAmount,
-      'currentAmount': currentAmount,
+      'targets': targets,
       'targetDate': targetDate.toIso8601String(),
-      'category': category,
       'createdAt': createdAt.toIso8601String(),
     };
   }
 
   factory Goal.fromJson(Map<String, dynamic> json) {
+    Map<String, double> targets;
+    if (json['targets'] != null) {
+      targets = (json['targets'] as Map<String, dynamic>)
+          .map((k, v) => MapEntry(k, (v as num).toDouble()));
+    } else {
+      final amount = (json['targetAmount'] as num?)?.toDouble() ?? 0;
+      targets = {'Cash': amount};
+    }
+
     return Goal(
       id: json['id'],
       title: json['title'],
-      description: json['description'],
-      targetAmount: (json['targetAmount'] as num).toDouble(),
-      currentAmount: (json['currentAmount'] as num).toDouble(),
+      description: json['description'] ?? '',
+      targets: targets,
       targetDate: DateTime.parse(json['targetDate']),
-      category: json['category'],
       createdAt: DateTime.parse(json['createdAt']),
     );
   }
@@ -62,20 +82,16 @@ class Goal {
     String? id,
     String? title,
     String? description,
-    double? targetAmount,
-    double? currentAmount,
+    Map<String, double>? targets,
     DateTime? targetDate,
-    String? category,
     DateTime? createdAt,
   }) {
     return Goal(
       id: id ?? this.id,
       title: title ?? this.title,
       description: description ?? this.description,
-      targetAmount: targetAmount ?? this.targetAmount,
-      currentAmount: currentAmount ?? this.currentAmount,
+      targets: targets ?? this.targets,
       targetDate: targetDate ?? this.targetDate,
-      category: category ?? this.category,
       createdAt: createdAt ?? this.createdAt,
     );
   }

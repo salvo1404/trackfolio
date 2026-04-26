@@ -228,23 +228,23 @@ class PortfolioService extends ChangeNotifier {
   // Budget methods
   Future<void> addBudget(Budget budget) async {
     _budgets.add(budget);
-    if (_uid != null) await _firestore.setBudget(_uid!, budget);
     notifyListeners();
+    if (_uid != null) await _firestore.setBudget(_uid!, budget);
   }
 
   Future<void> updateBudget(Budget budget) async {
     final index = _budgets.indexWhere((b) => b.id == budget.id);
     if (index != -1) {
       _budgets[index] = budget;
-      if (_uid != null) await _firestore.setBudget(_uid!, budget);
       notifyListeners();
+      if (_uid != null) await _firestore.setBudget(_uid!, budget);
     }
   }
 
   Future<void> deleteBudget(String id) async {
     _budgets.removeWhere((budget) => budget.id == id);
-    if (_uid != null) await _firestore.deleteBudget(_uid!, id);
     notifyListeners();
+    if (_uid != null) await _firestore.deleteBudget(_uid!, id);
   }
 
   // Transaction methods
@@ -263,45 +263,45 @@ class PortfolioService extends ChangeNotifier {
   // Goal methods
   Future<void> addGoal(Goal goal) async {
     _goals.add(goal);
-    if (_uid != null) await _firestore.setGoal(_uid!, goal);
     notifyListeners();
+    if (_uid != null) await _firestore.setGoal(_uid!, goal);
   }
 
   Future<void> updateGoal(Goal goal) async {
     final index = _goals.indexWhere((g) => g.id == goal.id);
     if (index != -1) {
       _goals[index] = goal;
-      if (_uid != null) await _firestore.setGoal(_uid!, goal);
       notifyListeners();
+      if (_uid != null) await _firestore.setGoal(_uid!, goal);
     }
   }
 
   Future<void> deleteGoal(String id) async {
     _goals.removeWhere((goal) => goal.id == id);
-    if (_uid != null) await _firestore.deleteGoal(_uid!, id);
     notifyListeners();
+    if (_uid != null) await _firestore.deleteGoal(_uid!, id);
   }
 
   // Share Transaction methods
   Future<void> addShareTransaction(ShareTransaction transaction) async {
     _shareTransactions.add(transaction);
-    if (_uid != null) await _firestore.setShareTransaction(_uid!, transaction);
     notifyListeners();
+    if (_uid != null) await _firestore.setShareTransaction(_uid!, transaction);
   }
 
   Future<void> updateShareTransaction(ShareTransaction transaction) async {
     final index = _shareTransactions.indexWhere((t) => t.id == transaction.id);
     if (index != -1) {
       _shareTransactions[index] = transaction;
-      if (_uid != null) await _firestore.setShareTransaction(_uid!, transaction);
       notifyListeners();
+      if (_uid != null) await _firestore.setShareTransaction(_uid!, transaction);
     }
   }
 
   Future<void> deleteShareTransaction(String id) async {
     _shareTransactions.removeWhere((transaction) => transaction.id == id);
-    if (_uid != null) await _firestore.deleteShareTransaction(_uid!, id);
     notifyListeners();
+    if (_uid != null) await _firestore.deleteShareTransaction(_uid!, id);
   }
 
   List<ShareTransaction> getRecentShareTransactions({int limit = 10}) {

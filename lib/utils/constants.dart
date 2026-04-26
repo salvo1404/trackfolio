@@ -41,16 +41,4 @@ class AppConstants {
     'Investments',
     'Other',
   ];
-
-  // Goal Categories
-  static const List<String> goalCategories = [
-    'Emergency Fund',
-    'Retirement',
-    'Home Purchase',
-    'Education',
-    'Vacation',
-    'Investment',
-    'Debt Payoff',
-    'Other',
-  ];
 }
