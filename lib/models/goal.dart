@@ -78,6 +78,46 @@ class Goal {
     return Goal.fromJson(jsonDecode(jsonString));
   }
 
+  List<DateTime> yearlyMilestones() {
+    final now = DateTime.now();
+    final startYear = now.year + 1;
+    final milestones = <DateTime>[];
+    for (var year = startYear; year <= targetDate.year; year++) {
+      final milestone = DateTime(year, targetDate.month, targetDate.day);
+      if (!milestone.isAfter(targetDate)) {
+        milestones.add(milestone);
+      }
+    }
+    if (milestones.isEmpty ||
+        milestones.last.year != targetDate.year ||
+        milestones.last.month != targetDate.month) {
+      milestones.add(targetDate);
+    }
+    return milestones;
+  }
+
+  double milestoneTargetAmount(DateTime milestone, Map<String, double> portfolioByType) {
+    final now = DateTime.now();
+    final totalDuration = targetDate.difference(now).inDays;
+    if (totalDuration <= 0) return targetAmount;
+    final elapsed = milestone.difference(now).inDays.clamp(0, totalDuration);
+    final ratio = elapsed / totalDuration;
+    final current = currentAmount(portfolioByType);
+    return current + (targetAmount - current) * ratio;
+  }
+
+  Map<String, double> milestoneTargets(DateTime milestone, Map<String, double> portfolioByType) {
+    final now = DateTime.now();
+    final totalDuration = targetDate.difference(now).inDays;
+    if (totalDuration <= 0) return Map.of(targets);
+    final elapsed = milestone.difference(now).inDays.clamp(0, totalDuration);
+    final ratio = elapsed / totalDuration;
+    return targets.map((k, v) {
+      final current = portfolioByType[k] ?? 0;
+      return MapEntry(k, current + (v - current) * ratio);
+    });
+  }
+
   Goal copyWith({
     String? id,
     String? title,

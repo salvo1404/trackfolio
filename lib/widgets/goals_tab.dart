@@ -112,205 +112,13 @@ class GoalsTab extends StatelessWidget {
                 }
 
                 final goal = portfolioService.goals[index];
-                final totalProgress = goal.progress(portfolio);
-                final totalCurrent = goal.currentAmount(portfolio);
-                final completed = goal.isCompleted(portfolio);
 
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  elevation: 3,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: InkWell(
-                    onTap: () => _showEditGoalDialog(context, goal),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      goal.title,
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    if (goal.description.isNotEmpty) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        goal.description,
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
-                            children: goal.targets.keys.map((type) {
-                              return Chip(
-                                label: Text(
-                                  type,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: AppTheme.getPortfolioTypeColor(type),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                backgroundColor: AppTheme.getPortfolioTypeColor(type).withValues(alpha: 0.1),
-                                padding: EdgeInsets.zero,
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                visualDensity: VisualDensity.compact,
-                                side: BorderSide(
-                                  color: AppTheme.getPortfolioTypeColor(type).withValues(alpha: 0.3),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                          const SizedBox(height: 16),
-                          ...goal.targets.entries.map((entry) {
-                            final type = entry.key;
-                            final target = entry.value;
-                            final current = portfolio[type] ?? 0;
-                            final pct = target > 0 ? (current / target).clamp(0.0, 1.0) : 0.0;
-                            final color = AppTheme.getPortfolioTypeColor(type);
-
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        type,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-                                      Text(
-                                        '${currencyFormatter.format(current)} / ${currencyFormatter.format(target)}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: LinearProgressIndicator(
-                                      value: pct,
-                                      backgroundColor: color.withValues(alpha: 0.15),
-                                      valueColor: AlwaysStoppedAnimation(color),
-                                      minHeight: 6,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Total Progress',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${currencyFormatter.format(totalCurrent)} / ${currencyFormatter.format(goal.targetAmount)}',
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    'Target Date',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Text(
-                                    dateFormat.format(goal.targetDate),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: (totalProgress / 100).clamp(0.0, 1.0),
-                              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                              valueColor: AlwaysStoppedAnimation(
-                                completed ? AppTheme.successColor : AppTheme.primaryColor,
-                              ),
-                              minHeight: 8,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                '${totalProgress.toStringAsFixed(1)}% complete',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                              ),
-                              Text(
-                                '${goal.daysRemaining} days left',
-                                style: TextStyle(
-                                  color: goal.daysRemaining < 0
-                                      ? AppTheme.errorColor
-                                      : Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                return _GoalCard(
+                  goal: goal,
+                  portfolio: portfolio,
+                  currencyFormatter: currencyFormatter,
+                  dateFormat: dateFormat,
+                  onEdit: () => _showEditGoalDialog(context, goal),
                 );
               },
             ),
@@ -328,6 +136,274 @@ class GoalsTab extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => _GoalDialog(goal: goal),
+    );
+  }
+}
+
+class _GoalCard extends StatefulWidget {
+  final Goal goal;
+  final Map<String, double> portfolio;
+  final CurrencyFormatter currencyFormatter;
+  final DateFormat dateFormat;
+  final VoidCallback onEdit;
+
+  const _GoalCard({
+    required this.goal,
+    required this.portfolio,
+    required this.currencyFormatter,
+    required this.dateFormat,
+    required this.onEdit,
+  });
+
+  @override
+  State<_GoalCard> createState() => _GoalCardState();
+}
+
+class _GoalCardState extends State<_GoalCard> {
+  DateTime? _selectedMilestone;
+
+  @override
+  Widget build(BuildContext context) {
+    final goal = widget.goal;
+    final portfolio = widget.portfolio;
+    final currencyFormatter = widget.currencyFormatter;
+    final dateFormat = widget.dateFormat;
+
+    final milestones = goal.yearlyMilestones();
+    final activeTargets = _selectedMilestone != null
+        ? goal.milestoneTargets(_selectedMilestone!, portfolio)
+        : goal.targets;
+    final activeTargetAmount = _selectedMilestone != null
+        ? goal.milestoneTargetAmount(_selectedMilestone!, portfolio)
+        : goal.targetAmount;
+
+    final totalCurrent = goal.currentAmount(portfolio);
+    final totalProgress = activeTargetAmount > 0
+        ? (totalCurrent / activeTargetAmount) * 100
+        : 0.0;
+    final completed = totalCurrent >= activeTargetAmount;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        goal.title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (goal.description.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          goal.description,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: widget.onEdit,
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 20,
+                  ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    padding: const EdgeInsets.all(8),
+                    minimumSize: const Size(36, 36),
+                  ),
+                ),
+              ],
+            ),
+            if (milestones.length > 1) ...[
+              const SizedBox(height: 12),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: milestones.map((milestone) {
+                    final isSelected = _selectedMilestone == milestone;
+                    final isFinal = milestone == goal.targetDate;
+                    final label = DateFormat('MMM yyyy').format(milestone);
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          ),
+                        ),
+                        selected: isSelected,
+                        onSelected: (_) {
+                          setState(() {
+                            _selectedMilestone = isSelected ? null : milestone;
+                          });
+                        },
+                        selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                        side: BorderSide(
+                          color: isFinal
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.outline,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            ...activeTargets.entries.map((entry) {
+              final type = entry.key;
+              final target = entry.value;
+              final current = portfolio[type] ?? 0;
+              final pct = target > 0 ? (current / target).clamp(0.0, 1.0) : 0.0;
+              final color = AppTheme.getPortfolioTypeColor(type);
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          type,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        Text(
+                          '${currencyFormatter.format(current)} / ${currencyFormatter.format(target)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: pct,
+                        backgroundColor: color.withValues(alpha: 0.15),
+                        valueColor: AlwaysStoppedAnimation(color),
+                        minHeight: 6,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _selectedMilestone != null ? 'Milestone Target' : 'Total Progress',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                    ),
+                    Text(
+                      '${currencyFormatter.format(totalCurrent)} / ${currencyFormatter.format(activeTargetAmount)}',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Target Date',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                    ),
+                    Text(
+                      dateFormat.format(_selectedMilestone ?? goal.targetDate),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: (totalProgress / 100).clamp(0.0, 1.0),
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                valueColor: AlwaysStoppedAnimation(
+                  completed ? AppTheme.successColor : AppTheme.primaryColor,
+                ),
+                minHeight: 8,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${totalProgress.toStringAsFixed(1)}% complete',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                ),
+                Text(
+                  '${goal.daysRemaining} days left',
+                  style: TextStyle(
+                    color: goal.daysRemaining < 0
+                        ? AppTheme.errorColor
+                        : Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
