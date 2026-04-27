@@ -38,8 +38,8 @@ class TrackfolioApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider(
-          create: (_) => CurrencyService(),
+        ChangeNotifierProvider(
+          create: (_) => CurrencyService(prefs),
         ),
         Provider(
           create: (_) => FirestoreService(),

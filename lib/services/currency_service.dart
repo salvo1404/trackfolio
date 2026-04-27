@@ -1,6 +1,14 @@
-class CurrencyService {
-  // Exchange rates relative to USD (1 USD = X currency)
-  static const Map<String, double> _exchangeRates = {
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+class CurrencyService extends ChangeNotifier {
+  static const _cacheKey = 'exchange_rates';
+  static const _cacheTimestampKey = 'exchange_rates_timestamp';
+  static const _cacheDuration = Duration(hours: 24);
+
+  static const Map<String, double> _fallbackRates = {
     'USD': 1.0,
     'EUR': 0.92,
     'GBP': 0.79,
@@ -32,29 +40,93 @@ class CurrencyService {
     'AED': 'د.إ',
   };
 
-  /// Convert amount from USD to target currency
+  final SharedPreferences _prefs;
+  Map<String, double> _rates = Map.of(_fallbackRates);
+  bool _isLoading = false;
+
+  bool get isLoading => _isLoading;
+
+  CurrencyService(this._prefs) {
+    _loadCachedRates();
+    _refreshIfStale();
+  }
+
+  void _loadCachedRates() {
+    final cached = _prefs.getString(_cacheKey);
+    if (cached != null) {
+      try {
+        final map = jsonDecode(cached) as Map<String, dynamic>;
+        _rates = map.map((k, v) => MapEntry(k, (v as num).toDouble()));
+      } catch (_) {}
+    }
+  }
+
+  bool get _isCacheStale {
+    final timestamp = _prefs.getInt(_cacheTimestampKey);
+    if (timestamp == null) return true;
+    final cached = DateTime.fromMillisecondsSinceEpoch(timestamp);
+    return DateTime.now().difference(cached) > _cacheDuration;
+  }
+
+  Future<void> _refreshIfStale() async {
+    if (_isCacheStale) await refreshRates();
+  }
+
+  Future<void> refreshRates() async {
+    if (_isLoading) return;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await http
+          .get(Uri.parse('https://open.er-api.com/v6/latest/USD'))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final apiRates = data['rates'] as Map<String, dynamic>?;
+        if (apiRates != null) {
+          final newRates = <String, double>{};
+          for (final code in _fallbackRates.keys) {
+            final rate = apiRates[code];
+            if (rate != null) {
+              newRates[code] = (rate as num).toDouble();
+            } else {
+              newRates[code] = _fallbackRates[code]!;
+            }
+          }
+          _rates = newRates;
+          await _prefs.setString(_cacheKey, jsonEncode(_rates));
+          await _prefs.setInt(
+            _cacheTimestampKey,
+            DateTime.now().millisecondsSinceEpoch,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch exchange rates: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   double convert(double amountInUSD, String targetCurrency) {
-    final rate = _exchangeRates[targetCurrency] ?? 1.0;
+    final rate = _rates[targetCurrency] ?? 1.0;
     return amountInUSD * rate;
   }
 
-  /// Convert amount from source currency to target currency
   double convertBetween(double amount, String fromCurrency, String toCurrency) {
-    // First convert to USD
-    final rateFrom = _exchangeRates[fromCurrency] ?? 1.0;
+    final rateFrom = _rates[fromCurrency] ?? 1.0;
     final amountInUSD = amount / rateFrom;
-
-    // Then convert to target currency
     return convert(amountInUSD, toCurrency);
   }
 
-  /// Get currency symbol for a currency code
   String getSymbol(String currencyCode) {
     return _currencySymbols[currencyCode] ?? '\$';
   }
 
-  /// Get exchange rate for a currency (relative to USD)
   double getRate(String currencyCode) {
-    return _exchangeRates[currencyCode] ?? 1.0;
+    return _rates[currencyCode] ?? 1.0;
   }
 }

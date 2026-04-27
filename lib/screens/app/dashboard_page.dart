@@ -14,7 +14,7 @@ class DashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final portfolioService = context.watch<PortfolioService>();
     final authService = context.watch<AuthService>();
-    final currencyService = context.read<CurrencyService>();
+    final currencyService = context.watch<CurrencyService>();
     final currencyFormatter = CurrencyFormatter(currencyService, authService.currentUser);
 
     return Scaffold(
