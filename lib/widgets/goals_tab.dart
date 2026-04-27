@@ -300,12 +300,34 @@ class _GoalCardState extends State<_GoalCard> {
                             color: Colors.grey[700],
                           ),
                         ),
-                        Text(
-                          '${currencyFormatter.format(current)} / ${currencyFormatter.format(target)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              '${currencyFormatter.format(current)} / ${currencyFormatter.format(target)}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: pct >= 1.0
+                                    ? AppTheme.successColor.withValues(alpha: 0.15)
+                                    : color.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${(pct * 100).toStringAsFixed(0)}%',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: pct >= 1.0 ? AppTheme.successColor : color,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
