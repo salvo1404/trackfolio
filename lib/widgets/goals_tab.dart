@@ -519,6 +519,15 @@ class _GoalDialogState extends State<_GoalDialog> {
     if (targets.isEmpty) return;
 
     final portfolioService = context.read<PortfolioService>();
+
+    Map<String, double>? startingAmounts;
+    if (widget.goal == null) {
+      final portfolio = portfolioService.portfolioByType;
+      startingAmounts = {
+        for (final type in targets.keys) type: portfolio[type] ?? 0,
+      };
+    }
+
     final goal = Goal(
       id: widget.goal?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
       title: _titleController.text,
@@ -528,6 +537,7 @@ class _GoalDialogState extends State<_GoalDialog> {
       createdAt: widget.goal?.createdAt ?? DateTime.now(),
       isPercentageMode: _isPercentageMode,
       percentages: percentages,
+      startingAmounts: startingAmounts ?? widget.goal?.startingAmounts,
     );
 
     if (widget.goal == null) {

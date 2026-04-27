@@ -9,6 +9,7 @@ class Goal {
   final DateTime createdAt;
   final bool isPercentageMode;
   final Map<String, double>? percentages;
+  final Map<String, double>? startingAmounts;
 
   Goal({
     required this.id,
@@ -19,6 +20,7 @@ class Goal {
     required this.createdAt,
     this.isPercentageMode = false,
     this.percentages,
+    this.startingAmounts,
   });
 
   double get targetAmount => targets.values.fold(0.0, (sum, v) => sum + v);
@@ -55,6 +57,7 @@ class Goal {
       'createdAt': createdAt.toIso8601String(),
       'isPercentageMode': isPercentageMode,
       if (percentages != null) 'percentages': percentages,
+      if (startingAmounts != null) 'startingAmounts': startingAmounts,
     };
   }
 
@@ -74,6 +77,12 @@ class Goal {
           .map((k, v) => MapEntry(k, (v as num).toDouble()));
     }
 
+    Map<String, double>? startingAmounts;
+    if (json['startingAmounts'] != null) {
+      startingAmounts = (json['startingAmounts'] as Map<String, dynamic>)
+          .map((k, v) => MapEntry(k, (v as num).toDouble()));
+    }
+
     return Goal(
       id: json['id'],
       title: json['title'],
@@ -83,6 +92,7 @@ class Goal {
       createdAt: DateTime.parse(json['createdAt']),
       isPercentageMode: json['isPercentageMode'] ?? false,
       percentages: percentages,
+      startingAmounts: startingAmounts,
     );
   }
 
@@ -93,8 +103,7 @@ class Goal {
   }
 
   List<DateTime> yearlyMilestones() {
-    final now = DateTime.now();
-    final startYear = now.year + 1;
+    final startYear = createdAt.year + 1;
     final milestones = <DateTime>[];
     for (var year = startYear; year <= targetDate.year; year++) {
       final milestone = DateTime(year, targetDate.month, targetDate.day);
@@ -111,24 +120,29 @@ class Goal {
   }
 
   double milestoneTargetAmount(DateTime milestone, Map<String, double> portfolioByType) {
-    final now = DateTime.now();
-    final totalDuration = targetDate.difference(now).inDays;
+    final start = createdAt;
+    final totalDuration = targetDate.difference(start).inDays;
     if (totalDuration <= 0) return targetAmount;
-    final elapsed = milestone.difference(now).inDays.clamp(0, totalDuration);
+    final elapsed = milestone.difference(start).inDays.clamp(0, totalDuration);
     final ratio = elapsed / totalDuration;
-    final current = currentAmount(portfolioByType);
-    return current + (targetAmount - current) * ratio;
+    final starting = startingAmounts ?? portfolioByType;
+    double startTotal = 0;
+    for (final type in targets.keys) {
+      startTotal += starting[type] ?? 0;
+    }
+    return startTotal + (targetAmount - startTotal) * ratio;
   }
 
   Map<String, double> milestoneTargets(DateTime milestone, Map<String, double> portfolioByType) {
-    final now = DateTime.now();
-    final totalDuration = targetDate.difference(now).inDays;
+    final start = createdAt;
+    final totalDuration = targetDate.difference(start).inDays;
     if (totalDuration <= 0) return Map.of(targets);
-    final elapsed = milestone.difference(now).inDays.clamp(0, totalDuration);
+    final elapsed = milestone.difference(start).inDays.clamp(0, totalDuration);
     final ratio = elapsed / totalDuration;
+    final starting = startingAmounts ?? portfolioByType;
     return targets.map((k, v) {
-      final current = portfolioByType[k] ?? 0;
-      return MapEntry(k, current + (v - current) * ratio);
+      final s = starting[k] ?? 0;
+      return MapEntry(k, s + (v - s) * ratio);
     });
   }
 
@@ -141,6 +155,7 @@ class Goal {
     DateTime? createdAt,
     bool? isPercentageMode,
     Map<String, double>? percentages,
+    Map<String, double>? startingAmounts,
   }) {
     return Goal(
       id: id ?? this.id,
@@ -151,6 +166,7 @@ class Goal {
       createdAt: createdAt ?? this.createdAt,
       isPercentageMode: isPercentageMode ?? this.isPercentageMode,
       percentages: percentages ?? this.percentages,
+      startingAmounts: startingAmounts ?? this.startingAmounts,
     );
   }
 }
