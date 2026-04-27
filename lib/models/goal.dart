@@ -10,6 +10,7 @@ class Goal {
   final bool isPercentageMode;
   final Map<String, double>? percentages;
   final Map<String, double>? startingAmounts;
+  final String currency;
 
   Goal({
     required this.id,
@@ -21,6 +22,7 @@ class Goal {
     this.isPercentageMode = false,
     this.percentages,
     this.startingAmounts,
+    this.currency = 'USD',
   });
 
   double get targetAmount => targets.values.fold(0.0, (sum, v) => sum + v);
@@ -58,6 +60,7 @@ class Goal {
       'isPercentageMode': isPercentageMode,
       if (percentages != null) 'percentages': percentages,
       if (startingAmounts != null) 'startingAmounts': startingAmounts,
+      'currency': currency,
     };
   }
 
@@ -93,6 +96,7 @@ class Goal {
       isPercentageMode: json['isPercentageMode'] ?? false,
       percentages: percentages,
       startingAmounts: startingAmounts,
+      currency: json['currency'] ?? 'USD',
     );
   }
 
@@ -156,6 +160,7 @@ class Goal {
     bool? isPercentageMode,
     Map<String, double>? percentages,
     Map<String, double>? startingAmounts,
+    String? currency,
   }) {
     return Goal(
       id: id ?? this.id,
@@ -167,6 +172,7 @@ class Goal {
       isPercentageMode: isPercentageMode ?? this.isPercentageMode,
       percentages: percentages ?? this.percentages,
       startingAmounts: startingAmounts ?? this.startingAmounts,
+      currency: currency ?? this.currency,
     );
   }
 }

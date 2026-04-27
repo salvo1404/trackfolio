@@ -3,21 +3,16 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/goal.dart';
 import '../services/portfolio_service.dart';
-import '../services/auth_service.dart';
 import '../services/currency_service.dart';
 import '../utils/constants.dart';
 import '../utils/theme.dart';
-import '../utils/currency_formatter.dart';
-
 class GoalsTab extends StatelessWidget {
   const GoalsTab({super.key});
 
   @override
   Widget build(BuildContext context) {
     final portfolioService = context.watch<PortfolioService>();
-    final authService = context.watch<AuthService>();
     final currencyService = context.watch<CurrencyService>();
-    final currencyFormatter = CurrencyFormatter(currencyService, authService.currentUser);
     final dateFormat = DateFormat('MMM dd, yyyy');
     final portfolio = portfolioService.portfolioByType;
 
@@ -116,7 +111,8 @@ class GoalsTab extends StatelessWidget {
                 return _GoalCard(
                   goal: goal,
                   portfolio: portfolio,
-                  currencyFormatter: currencyFormatter,
+                  currencyService: currencyService,
+                  portfolioService: portfolioService,
                   dateFormat: dateFormat,
                   onEdit: () => _showEditGoalDialog(context, goal),
                 );
@@ -143,14 +139,16 @@ class GoalsTab extends StatelessWidget {
 class _GoalCard extends StatefulWidget {
   final Goal goal;
   final Map<String, double> portfolio;
-  final CurrencyFormatter currencyFormatter;
+  final CurrencyService currencyService;
+  final PortfolioService portfolioService;
   final DateFormat dateFormat;
   final VoidCallback onEdit;
 
   const _GoalCard({
     required this.goal,
     required this.portfolio,
-    required this.currencyFormatter,
+    required this.currencyService,
+    required this.portfolioService,
     required this.dateFormat,
     required this.onEdit,
   });
@@ -162,26 +160,175 @@ class _GoalCard extends StatefulWidget {
 class _GoalCardState extends State<_GoalCard> {
   DateTime? _selectedMilestone;
 
+  String _formatGoalAmount(double amountInGoalCurrency) {
+    final cs = widget.currencyService;
+    final goalCurrency = widget.goal.currency;
+    final symbol = cs.getSymbol(goalCurrency);
+    final formatter = NumberFormat.currency(
+      symbol: symbol,
+      decimalDigits: goalCurrency == 'JPY' ? 0 : 2,
+    );
+    return formatter.format(amountInGoalCurrency);
+  }
+
+  void _showCurrencyPicker() {
+    const currencies = [
+      ('USD', '\$', 'US Dollar'),
+      ('EUR', '€', 'Euro'),
+      ('GBP', '£', 'British Pound'),
+      ('JPY', '¥', 'Japanese Yen'),
+      ('CNY', '¥', 'Chinese Yuan'),
+      ('INR', '₹', 'Indian Rupee'),
+      ('AUD', 'A\$', 'Australian Dollar'),
+      ('CAD', 'C\$', 'Canadian Dollar'),
+      ('CHF', 'CHF', 'Swiss Franc'),
+      ('BRL', 'R\$', 'Brazilian Real'),
+      ('ZAR', 'R', 'South African Rand'),
+      ('MXN', 'MX\$', 'Mexican Peso'),
+      ('AED', 'د.إ', 'UAE Dirham'),
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final goal = widget.goal;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Goal Currency',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Targets will be converted automatically',
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: currencies.length,
+                  itemBuilder: (context, index) {
+                    final (code, symbol, name) = currencies[index];
+                    final isSelected = code == goal.currency;
+                    return ListTile(
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
+                              : Colors.grey.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          code,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        '$name ($symbol)',
+                        style: TextStyle(
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                      ),
+                      trailing: isSelected
+                          ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary)
+                          : null,
+                      onTap: () {
+                        if (code != goal.currency) {
+                          _changeCurrency(code);
+                        }
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _changeCurrency(String newCurrency) {
+    final goal = widget.goal;
+    final cs = widget.currencyService;
+    final oldCurrency = goal.currency;
+
+    final newTargets = goal.targets.map((type, amount) {
+      return MapEntry(type, cs.convertBetween(amount, oldCurrency, newCurrency));
+    });
+
+    Map<String, double>? newStartingAmounts;
+    if (goal.startingAmounts != null) {
+      newStartingAmounts = goal.startingAmounts!.map((type, amount) {
+        return MapEntry(type, cs.convertBetween(amount, oldCurrency, newCurrency));
+      });
+    }
+
+    final updated = goal.copyWith(
+      targets: newTargets,
+      startingAmounts: newStartingAmounts,
+      currency: newCurrency,
+    );
+    widget.portfolioService.updateGoal(updated);
+  }
+
   @override
   Widget build(BuildContext context) {
     final goal = widget.goal;
-    final portfolio = widget.portfolio;
-    final currencyFormatter = widget.currencyFormatter;
     final dateFormat = widget.dateFormat;
+    final portfolioInGoalCurrency = widget.portfolio.map((type, usdValue) =>
+        MapEntry(type, widget.currencyService.convert(usdValue, goal.currency)));
 
     final milestones = goal.yearlyMilestones();
     final activeTargets = _selectedMilestone != null
-        ? goal.milestoneTargets(_selectedMilestone!, portfolio)
+        ? goal.milestoneTargets(_selectedMilestone!, portfolioInGoalCurrency)
         : goal.targets;
     final activeTargetAmount = _selectedMilestone != null
-        ? goal.milestoneTargetAmount(_selectedMilestone!, portfolio)
+        ? goal.milestoneTargetAmount(_selectedMilestone!, portfolioInGoalCurrency)
         : goal.targetAmount;
 
-    final totalCurrent = goal.currentAmount(portfolio);
+    double totalCurrentInGoalCurrency = 0;
+    for (final type in goal.targets.keys) {
+      totalCurrentInGoalCurrency += portfolioInGoalCurrency[type] ?? 0;
+    }
     final totalProgress = activeTargetAmount > 0
-        ? (totalCurrent / activeTargetAmount) * 100
+        ? (totalCurrentInGoalCurrency / activeTargetAmount) * 100
         : 0.0;
-    final completed = totalCurrent >= activeTargetAmount;
+    final completed = totalCurrentInGoalCurrency >= activeTargetAmount;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -221,18 +368,54 @@ class _GoalCardState extends State<_GoalCard> {
                     ],
                   ),
                 ),
-                IconButton(
-                  onPressed: widget.onEdit,
-                  icon: Icon(
-                    Icons.edit_outlined,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 20,
-                  ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                    padding: const EdgeInsets.all(8),
-                    minimumSize: const Size(36, 36),
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    InkWell(
+                      onTap: _showCurrencyPicker,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              goal.currency,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            Icon(
+                              Icons.unfold_more,
+                              size: 14,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      onPressed: widget.onEdit,
+                      icon: Icon(
+                        Icons.edit_outlined,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 20,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                        padding: const EdgeInsets.all(8),
+                        minimumSize: const Size(36, 36),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -280,8 +463,8 @@ class _GoalCardState extends State<_GoalCard> {
             ...(activeTargets.entries.toList()..sort((a, b) => b.value.compareTo(a.value))).map((entry) {
               final type = entry.key;
               final target = entry.value;
-              final current = portfolio[type] ?? 0;
-              final pct = target > 0 ? (current / target).clamp(0.0, 1.0) : 0.0;
+              final currentInGoalCurrency = portfolioInGoalCurrency[type] ?? 0;
+              final pct = target > 0 ? (currentInGoalCurrency / target).clamp(0.0, 1.0) : 0.0;
               final color = AppTheme.getPortfolioTypeColor(type);
 
               return Padding(
@@ -292,18 +475,22 @@ class _GoalCardState extends State<_GoalCard> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          type,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[700],
+                        Flexible(
+                          child: Text(
+                            type,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[700],
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              '${currencyFormatter.format(current)} / ${currencyFormatter.format(target)}',
+                              '${_formatGoalAmount(currentInGoalCurrency)} / ${_formatGoalAmount(target)}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey[600],
@@ -361,7 +548,7 @@ class _GoalCardState extends State<_GoalCard> {
                         ),
                       ),
                       Text(
-                        '${currencyFormatter.format(totalCurrent)} / ${currencyFormatter.format(activeTargetAmount)}',
+                        '${_formatGoalAmount(totalCurrentInGoalCurrency)} / ${_formatGoalAmount(activeTargetAmount)}',
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -560,6 +747,7 @@ class _GoalDialogState extends State<_GoalDialog> {
       isPercentageMode: _isPercentageMode,
       percentages: percentages,
       startingAmounts: startingAmounts ?? widget.goal?.startingAmounts,
+      currency: widget.goal?.currency ?? 'USD',
     );
 
     if (widget.goal == null) {
