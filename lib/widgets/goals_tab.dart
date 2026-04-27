@@ -327,25 +327,29 @@ class _GoalCardState extends State<_GoalCard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _selectedMilestone != null ? 'Milestone Target' : 'Total Progress',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _selectedMilestone != null ? 'Milestone Target' : 'Total Progress',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-                    Text(
-                      '${currencyFormatter.format(totalCurrent)} / ${currencyFormatter.format(activeTargetAmount)}',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                      Text(
+                        '${currencyFormatter.format(totalCurrent)} / ${currencyFormatter.format(activeTargetAmount)}',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -429,22 +433,36 @@ class _GoalDialogState extends State<_GoalDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
+  late TextEditingController _totalTargetController;
   late DateTime _targetDate;
   late List<_TargetEntry> _targetEntries;
+  late bool _isPercentageMode;
 
   @override
   void initState() {
     super.initState();
+    _isPercentageMode = false;
     _titleController = TextEditingController(text: widget.goal?.title ?? '');
     _descriptionController = TextEditingController(text: widget.goal?.description ?? '');
     _targetDate = widget.goal?.targetDate ?? DateTime.now().add(const Duration(days: 365));
 
     if (widget.goal != null) {
-      _targetEntries = widget.goal!.targets.entries
-          .map((e) => _TargetEntry(type: e.key, amount: e.value.toString()))
-          .toList();
+      _isPercentageMode = widget.goal!.isPercentageMode;
+      if (_isPercentageMode && widget.goal!.percentages != null) {
+        _targetEntries = widget.goal!.percentages!.entries
+            .map((e) => _TargetEntry(type: e.key, amount: e.value.toString()))
+            .toList();
+      } else {
+        _targetEntries = widget.goal!.targets.entries
+            .map((e) => _TargetEntry(type: e.key, amount: e.value.toString()))
+            .toList();
+      }
+      _totalTargetController = TextEditingController(
+        text: widget.goal!.targetAmount.toString(),
+      );
     } else {
       _targetEntries = [_TargetEntry()];
+      _totalTargetController = TextEditingController();
     }
   }
 
@@ -452,6 +470,7 @@ class _GoalDialogState extends State<_GoalDialog> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _totalTargetController.dispose();
     for (final entry in _targetEntries) {
       entry.amountController.dispose();
     }
@@ -466,22 +485,34 @@ class _GoalDialogState extends State<_GoalDialog> {
     return AppConstants.portfolioTypes.where((t) => !used.contains(t)).toList();
   }
 
-  double get _totalTarget {
-    double total = 0;
-    for (final entry in _targetEntries) {
-      total += double.tryParse(entry.amountController.text) ?? 0;
+  double get _userTotal =>
+      double.tryParse(_totalTargetController.text) ?? 0;
+
+  double _resolveEntryAmount(_TargetEntry entry) {
+    final value = double.tryParse(entry.amountController.text) ?? 0;
+    if (_isPercentageMode) {
+      return _userTotal * value / 100;
     }
-    return total;
+    return value;
   }
+
 
   void _save() {
     if (!_formKey.currentState!.validate()) return;
 
     final targets = <String, double>{};
+    Map<String, double>? percentages;
+    if (_isPercentageMode) {
+      percentages = <String, double>{};
+    }
     for (final entry in _targetEntries) {
       if (entry.type != null) {
-        final amount = double.tryParse(entry.amountController.text) ?? 0;
+        final rawValue = double.tryParse(entry.amountController.text) ?? 0;
+        final amount = _resolveEntryAmount(entry);
         if (amount > 0) targets[entry.type!] = amount;
+        if (_isPercentageMode && rawValue > 0) {
+          percentages![entry.type!] = rawValue;
+        }
       }
     }
 
@@ -495,6 +526,8 @@ class _GoalDialogState extends State<_GoalDialog> {
       targets: targets,
       targetDate: _targetDate,
       createdAt: widget.goal?.createdAt ?? DateTime.now(),
+      isPercentageMode: _isPercentageMode,
+      percentages: percentages,
     );
 
     if (widget.goal == null) {
@@ -647,6 +680,51 @@ class _GoalDialogState extends State<_GoalDialog> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 20),
+
+                  // Total Target Amount
+                  _buildLabel('Total Target Amount'),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _totalTargetController,
+                    decoration: _inputDecoration(
+                      context,
+                      hintText: 'e.g., 1000000',
+                      icon: Icons.attach_money,
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => setState(() {}),
+                    validator: (v) {
+                      final val = double.tryParse(v ?? '') ?? 0;
+                      return val <= 0 ? 'Enter a target amount' : null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Amount / Percentage toggle
+                  _buildLabel('Target Mode'),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<bool>(
+                      segments: const [
+                        ButtonSegment(
+                          value: false,
+                          label: Text('Amount'),
+                          icon: Icon(Icons.attach_money, size: 18),
+                        ),
+                        ButtonSegment(
+                          value: true,
+                          label: Text('Percentage'),
+                          icon: Icon(Icons.percent, size: 18),
+                        ),
+                      ],
+                      selected: <bool>{_isPercentageMode},
+                      onSelectionChanged: (Set<bool> v) {
+                        setState(() => _isPercentageMode = v.first);
+                      },
+                    ),
+                  ),
                   const SizedBox(height: 24),
 
                   // Asset Targets
@@ -676,92 +754,131 @@ class _GoalDialogState extends State<_GoalDialog> {
                     if (entry.type != null && !available.contains(entry.type)) {
                       available.insert(0, entry.type!);
                     }
+                    final entryValue = double.tryParse(entry.amountController.text) ?? 0;
+                    final resolvedAmount = _resolveEntryAmount(entry);
+
+                    String? tip;
+                    if (entryValue > 0 && _userTotal > 0) {
+                      if (_isPercentageMode) {
+                        tip = '= \$${resolvedAmount.toStringAsFixed(0)}';
+                      } else {
+                        final pct = (entryValue / _userTotal * 100);
+                        tip = '${pct.toStringAsFixed(1)}% of total';
+                      }
+                    }
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            flex: 3,
-                            child: DropdownButtonFormField<String>(
-                              initialValue: entry.type,
-                              decoration: _inputDecoration(
-                                context,
-                                hintText: 'Asset type',
-                                icon: Icons.category_outlined,
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: DropdownButtonFormField<String>(
+                                  initialValue: entry.type,
+                                  decoration: _inputDecoration(
+                                    context,
+                                    hintText: 'Asset type',
+                                    icon: Icons.category_outlined,
+                                  ),
+                                  items: available
+                                      .map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 14))))
+                                      .toList(),
+                                  onChanged: (v) {
+                                    setState(() => entry.type = v);
+                                  },
+                                  validator: (v) => v == null ? 'Required' : null,
+                                ),
                               ),
-                              items: available
-                                  .map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 14))))
-                                  .toList(),
-                              onChanged: (v) {
-                                setState(() => entry.type = v);
-                              },
-                              validator: (v) => v == null ? 'Required' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            flex: 2,
-                            child: TextFormField(
-                              controller: entry.amountController,
-                              decoration: _inputDecoration(
-                                context,
-                                hintText: 'Amount',
-                                icon: Icons.attach_money,
+                              const SizedBox(width: 8),
+                              Expanded(
+                                flex: 2,
+                                child: TextFormField(
+                                  controller: entry.amountController,
+                                  decoration: _inputDecoration(
+                                    context,
+                                    hintText: _isPercentageMode ? '%' : 'Amount',
+                                    icon: _isPercentageMode ? Icons.percent : Icons.attach_money,
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (_) => setState(() {}),
+                                  validator: (v) => v?.isEmpty == true ? 'Required' : null,
+                                ),
                               ),
-                              keyboardType: TextInputType.number,
-                              onChanged: (_) => setState(() {}),
-                              validator: (v) => v?.isEmpty == true ? 'Required' : null,
-                            ),
+                              if (_targetEntries.length > 1)
+                                IconButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _targetEntries[i].amountController.dispose();
+                                      _targetEntries.removeAt(i);
+                                    });
+                                  },
+                                  icon: Icon(Icons.remove_circle_outline, color: Colors.red[400], size: 22),
+                                  padding: const EdgeInsets.only(top: 12),
+                                  constraints: const BoxConstraints(),
+                                ),
+                            ],
                           ),
-                          if (_targetEntries.length > 1)
-                            IconButton(
-                              onPressed: () {
-                                setState(() {
-                                  _targetEntries[i].amountController.dispose();
-                                  _targetEntries.removeAt(i);
-                                });
-                              },
-                              icon: Icon(Icons.remove_circle_outline, color: Colors.red[400], size: 22),
-                              padding: const EdgeInsets.only(top: 12),
-                              constraints: const BoxConstraints(),
+                          if (tip != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4, left: 4),
+                              child: Text(
+                                tip,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
                             ),
                         ],
                       ),
                     );
                   }),
-                  const SizedBox(height: 8),
-
-                  // Total Target
-                  _buildLabel('Total Target'),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      border: Border.all(color: Colors.blue[200]!),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.calculate,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 20,
+                  if (_isPercentageMode) ...[
+                    () {
+                      double totalPct = 0;
+                      for (final e in _targetEntries) {
+                        totalPct += double.tryParse(e.amountController.text) ?? 0;
+                      }
+                      final remaining = 100 - totalPct;
+                      final color = remaining.abs() < 0.01
+                          ? AppTheme.successColor
+                          : remaining < 0
+                              ? AppTheme.errorColor
+                              : Colors.orange;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Icon(
+                              remaining.abs() < 0.01
+                                  ? Icons.check_circle
+                                  : Icons.info_outline,
+                              size: 16,
+                              color: color,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              remaining.abs() < 0.01
+                                  ? 'Allocation complete (100%)'
+                                  : remaining > 0
+                                      ? '${remaining.toStringAsFixed(1)}% remaining to reach 100%'
+                                      : '${remaining.abs().toStringAsFixed(1)}% over 100%',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: color,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Text(
-                          '\$${_totalTarget.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                      );
+                    }(),
+                  ],
                   const SizedBox(height: 32),
 
                   // Divider

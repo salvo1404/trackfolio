@@ -479,7 +479,6 @@ class PortfolioTab extends StatelessWidget {
         final isWideScreen = constraints.maxWidth > 600;
 
         if (isWideScreen) {
-          // Wide screen: pie chart and legend side-by-side
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -489,21 +488,24 @@ class PortfolioTab extends StatelessWidget {
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               SizedBox(
                 height: 280,
                 child: Row(
                   children: [
                     Expanded(
                       flex: 3,
-                      child: PieChart(
-                        PieChartData(
-                          sections: _buildPieChartSections(
-                            portfolioService.portfolioByType,
-                            portfolioService.totalPortfolioValue,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: PieChart(
+                          PieChartData(
+                            sections: _buildPieChartSections(
+                              portfolioService.portfolioByType,
+                              portfolioService.totalPortfolioValue,
+                            ),
+                            sectionsSpace: 2,
+                            centerSpaceRadius: 45,
                           ),
-                          sectionsSpace: 2,
-                          centerSpaceRadius: 55,
                         ),
                       ),
                     ),
@@ -521,7 +523,6 @@ class PortfolioTab extends StatelessWidget {
             ],
           );
         } else {
-          // Mobile: pie chart and legend stacked vertically
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -532,8 +533,8 @@ class PortfolioTab extends StatelessWidget {
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 16),
-              SizedBox(
-                height: 250,
+              AspectRatio(
+                aspectRatio: 1.3,
                 child: PieChart(
                   PieChartData(
                     sections: _buildPieChartSections(
@@ -541,7 +542,7 @@ class PortfolioTab extends StatelessWidget {
                       portfolioService.totalPortfolioValue,
                     ),
                     sectionsSpace: 2,
-                    centerSpaceRadius: 50,
+                    centerSpaceRadius: 40,
                   ),
                 ),
               ),
@@ -586,7 +587,7 @@ class PortfolioTab extends StatelessWidget {
         value: entry.value,
         title: '${percentage.toStringAsFixed(1)}%',
         color: AppTheme.getPortfolioTypeColor(entry.key),
-        radius: 100,
+        radius: 80,
         titleStyle: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,

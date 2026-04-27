@@ -7,6 +7,8 @@ class Goal {
   final Map<String, double> targets;
   final DateTime targetDate;
   final DateTime createdAt;
+  final bool isPercentageMode;
+  final Map<String, double>? percentages;
 
   Goal({
     required this.id,
@@ -15,6 +17,8 @@ class Goal {
     required this.targets,
     required this.targetDate,
     required this.createdAt,
+    this.isPercentageMode = false,
+    this.percentages,
   });
 
   double get targetAmount => targets.values.fold(0.0, (sum, v) => sum + v);
@@ -49,6 +53,8 @@ class Goal {
       'targets': targets,
       'targetDate': targetDate.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
+      'isPercentageMode': isPercentageMode,
+      if (percentages != null) 'percentages': percentages,
     };
   }
 
@@ -62,6 +68,12 @@ class Goal {
       targets = {'Cash': amount};
     }
 
+    Map<String, double>? percentages;
+    if (json['percentages'] != null) {
+      percentages = (json['percentages'] as Map<String, dynamic>)
+          .map((k, v) => MapEntry(k, (v as num).toDouble()));
+    }
+
     return Goal(
       id: json['id'],
       title: json['title'],
@@ -69,6 +81,8 @@ class Goal {
       targets: targets,
       targetDate: DateTime.parse(json['targetDate']),
       createdAt: DateTime.parse(json['createdAt']),
+      isPercentageMode: json['isPercentageMode'] ?? false,
+      percentages: percentages,
     );
   }
 
@@ -125,6 +139,8 @@ class Goal {
     Map<String, double>? targets,
     DateTime? targetDate,
     DateTime? createdAt,
+    bool? isPercentageMode,
+    Map<String, double>? percentages,
   }) {
     return Goal(
       id: id ?? this.id,
@@ -133,6 +149,8 @@ class Goal {
       targets: targets ?? this.targets,
       targetDate: targetDate ?? this.targetDate,
       createdAt: createdAt ?? this.createdAt,
+      isPercentageMode: isPercentageMode ?? this.isPercentageMode,
+      percentages: percentages ?? this.percentages,
     );
   }
 }
