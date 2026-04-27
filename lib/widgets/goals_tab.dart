@@ -277,7 +277,7 @@ class _GoalCardState extends State<_GoalCard> {
               ),
             ],
             const SizedBox(height: 16),
-            ...activeTargets.entries.map((entry) {
+            ...(activeTargets.entries.toList()..sort((a, b) => b.value.compareTo(a.value))).map((entry) {
               final type = entry.key;
               final target = entry.value;
               final current = portfolio[type] ?? 0;
