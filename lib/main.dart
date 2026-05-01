@@ -23,7 +23,7 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
 
-  // SharedPreferences only for theme (local device preference)
+  // SharedPreferences for theme, currency rates, and price caching
   final prefs = await SharedPreferences.getInstance();
 
   runApp(TrackfolioApp(prefs: prefs));
@@ -45,7 +45,7 @@ class TrackfolioApp extends StatelessWidget {
           create: (_) => FirestoreService(),
         ),
         Provider(
-          create: (_) => StockApiService(),
+          create: (_) => StockApiService(prefs),
         ),
         ChangeNotifierProvider(
           create: (_) => AuthService(),

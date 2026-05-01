@@ -1,26 +1,76 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-
-class _CacheEntry<T> {
-  final T value;
-  final DateTime timestamp;
-  _CacheEntry(this.value) : timestamp = DateTime.now();
-  bool get isExpired => DateTime.now().difference(timestamp).inMinutes >= 60;
-}
+import 'package:shared_preferences/shared_preferences.dart';
 
 class StockApiService {
   static const String _apiKey = String.fromEnvironment('ALPHA_VANTAGE_KEY', defaultValue: '');
   static const String _baseUrl = 'https://www.alphavantage.co/query';
   static const String _coingeckoUrl = 'https://api.coingecko.com/api/v3';
 
-  final Map<String, _CacheEntry<Map<String, dynamic>?>> _stockCache = {};
-  final Map<String, _CacheEntry<double>> _cryptoCache = {};
+  static const _stockCacheKey = 'stock_prices_cache';
+  static const _stockTimestampKey = 'stock_prices_timestamp';
+  static const _cryptoCacheKey = 'crypto_prices_cache';
+  static const _cryptoTimestampKey = 'crypto_prices_timestamp';
+  static const _cacheDuration = Duration(hours: 24);
+
+  final SharedPreferences _prefs;
+  final Map<String, Map<String, dynamic>?> _stockCache = {};
+  final Map<String, double> _cryptoCache = {};
   DateTime? _lastAlphaVantageCall;
+
+  StockApiService(this._prefs) {
+    _loadCachedPrices();
+  }
+
+  void _loadCachedPrices() {
+    final stockJson = _prefs.getString(_stockCacheKey);
+    if (stockJson != null) {
+      try {
+        final map = jsonDecode(stockJson) as Map<String, dynamic>;
+        for (final entry in map.entries) {
+          if (entry.value == null) {
+            _stockCache[entry.key] = null;
+          } else {
+            _stockCache[entry.key] = Map<String, dynamic>.from(entry.value as Map);
+          }
+        }
+      } catch (_) {}
+    }
+
+    final cryptoJson = _prefs.getString(_cryptoCacheKey);
+    if (cryptoJson != null) {
+      try {
+        final map = jsonDecode(cryptoJson) as Map<String, dynamic>;
+        _cryptoCache.addAll(map.map((k, v) => MapEntry(k, (v as num).toDouble())));
+      } catch (_) {}
+    }
+  }
+
+  bool _isCacheStale(String timestampKey) {
+    final timestamp = _prefs.getInt(timestampKey);
+    if (timestamp == null) return true;
+    final cached = DateTime.fromMillisecondsSinceEpoch(timestamp);
+    return DateTime.now().difference(cached) > _cacheDuration;
+  }
+
+  Future<void> _persistStockCache() async {
+    await _prefs.setString(_stockCacheKey, jsonEncode(_stockCache));
+    await _prefs.setInt(_stockTimestampKey, DateTime.now().millisecondsSinceEpoch);
+  }
+
+  Future<void> _persistCryptoCache() async {
+    await _prefs.setString(_cryptoCacheKey, jsonEncode(_cryptoCache));
+    await _prefs.setInt(_cryptoTimestampKey, DateTime.now().millisecondsSinceEpoch);
+  }
 
   void clearCache() {
     _stockCache.clear();
     _cryptoCache.clear();
+    _prefs.remove(_stockCacheKey);
+    _prefs.remove(_stockTimestampKey);
+    _prefs.remove(_cryptoCacheKey);
+    _prefs.remove(_cryptoTimestampKey);
   }
 
   static const Map<String, String> _cryptoSymbolToId = {
@@ -53,14 +103,10 @@ class StockApiService {
     'PEPE': 'pepe',
   };
 
-  /// Lookup stock/ETF by symbol and get current price.
-  /// Supports international symbols like VUAA.LON, DHER.DEX, etc.
-  /// Returns a map with 'symbol', 'name', and 'price' if successful.
-  /// Returns null if the symbol is not found or there's an error.
   Future<Map<String, dynamic>?> lookupStock(String symbol) async {
     final cached = _stockCache[symbol];
-    if (cached != null && !cached.isExpired) {
-      return cached.value;
+    if (cached != null && !_isCacheStale(_stockTimestampKey)) {
+      return cached;
     }
 
     try {
@@ -83,7 +129,8 @@ class StockApiService {
           final quote = data['Global Quote'] as Map<String, dynamic>;
 
           if (quote.isEmpty) {
-            _stockCache[symbol] = _CacheEntry(null);
+            _stockCache[symbol] = null;
+            await _persistStockCache();
             return null;
           }
 
@@ -96,7 +143,8 @@ class StockApiService {
               'price': double.tryParse(price.toString()) ?? 0.0,
               'name': symbolName,
             };
-            _stockCache[symbol] = _CacheEntry(result);
+            _stockCache[symbol] = result;
+            await _persistStockCache();
             return result;
           }
         }
@@ -113,9 +161,6 @@ class StockApiService {
     }
   }
 
-  /// Search for stock/ETF symbols by keyword.
-  /// Returns matches with symbol, name, type, region, and currency.
-  /// Supports ETFs, equities, and international exchanges.
   Future<List<Map<String, String>>> searchSymbols(String keyword) async {
     try {
       await _throttleAlphaVantage();
@@ -166,19 +211,17 @@ class StockApiService {
     return _cryptoSymbolToId[upper] ?? symbol.toLowerCase().trim();
   }
 
-  /// Fetch current prices for multiple crypto assets in one request.
-  /// [symbols] can be ticker symbols (BTC, ETH) or CoinGecko IDs (bitcoin).
-  /// Returns a map of original symbol → price in USD.
   Future<Map<String, double>> lookupCryptoPrices(List<String> symbols) async {
     if (symbols.isEmpty) return {};
 
     final Map<String, double> result = {};
     final List<String> uncached = [];
+    final bool stale = _isCacheStale(_cryptoTimestampKey);
 
     for (final symbol in symbols) {
       final cached = _cryptoCache[symbol];
-      if (cached != null && !cached.isExpired) {
-        result[symbol] = cached.value;
+      if (cached != null && !stale) {
+        result[symbol] = cached;
       } else {
         uncached.add(symbol);
       }
@@ -204,9 +247,10 @@ class StockApiService {
           if (data.containsKey(id) && data[id]['usd'] != null) {
             final price = (data[id]['usd'] as num).toDouble();
             result[uncached[i]] = price;
-            _cryptoCache[uncached[i]] = _CacheEntry(price);
+            _cryptoCache[uncached[i]] = price;
           }
         }
+        await _persistCryptoCache();
       }
       return result;
     } catch (e) {
