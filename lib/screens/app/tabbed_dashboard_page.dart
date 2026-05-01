@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
+import '../../services/portfolio_service.dart';
 import '../../services/theme_service.dart';
 import '../../widgets/portfolio_tab.dart';
 import '../../widgets/goals_tab.dart';
@@ -20,10 +21,22 @@ class TabbedDashboardPage extends StatelessWidget {
       length: 5,
       child: Scaffold(
         appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.home),
-            onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/');
+          leading: Builder(
+            builder: (context) {
+              final portfolioService = context.watch<PortfolioService>();
+              return IconButton(
+                icon: portfolioService.isRefreshingPrices
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2.5),
+                      )
+                    : const Icon(Icons.sync, size: 28),
+                tooltip: 'Refresh prices',
+                onPressed: portfolioService.isRefreshingPrices
+                    ? null
+                    : () => portfolioService.forceRefreshPrices(),
+              );
             },
           ),
           title: GestureDetector(
@@ -56,7 +69,7 @@ class TabbedDashboardPage extends StatelessWidget {
           actions: [
             Builder(
               builder: (context) => IconButton(
-                icon: const Icon(Icons.account_circle),
+                icon: const Icon(Icons.account_circle, size: 28),
                 onPressed: () {
                   Scaffold.of(context).openEndDrawer();
                 },

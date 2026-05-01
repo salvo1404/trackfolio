@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../../services/auth_service.dart';
 import '../../utils/theme.dart';
 
@@ -17,6 +19,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   late String? _selectedCountry;
   late String? _selectedCurrency;
 
+  bool _isUploadingPhoto = false;
+
   final List<String> _countries = [
     'United States',
     'United Kingdom',
@@ -32,6 +36,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     'Brazil',
     'Mexico',
     'South Africa',
+    'United Arab Emirates',
   ];
 
   final List<String> _currencies = [
@@ -56,8 +61,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     final user = context.read<AuthService>().currentUser;
     _fullNameController = TextEditingController(text: user?.fullName ?? '');
     _phoneController = TextEditingController(text: user?.phoneNumber ?? '');
-    _selectedCountry = user?.country;
-    _selectedCurrency = user?.currency ?? 'USD';
+    _selectedCountry = _countries.contains(user?.country) ? user?.country : null;
+    _selectedCurrency = _currencies.contains(user?.currency ?? 'USD') ? (user?.currency ?? 'USD') : 'USD';
   }
 
   @override
@@ -65,6 +70,75 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     _fullNameController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    if (_isUploadingPhoto) return;
+
+    final authService = context.read<AuthService>();
+    final uid = authService.uid;
+    if (uid == null) return;
+
+    final picker = ImagePicker();
+    final XFile? picked;
+    try {
+      picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 80,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open image picker: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+      return;
+    }
+    if (picked == null) return;
+
+    setState(() => _isUploadingPhoto = true);
+
+    try {
+      final bytes = await picked.readAsBytes();
+      final ref = FirebaseStorage.instance.ref('profile_photos/$uid.jpg');
+      final uploadTask = ref.putData(
+        bytes,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+      await uploadTask.timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => throw Exception('Upload timed out'),
+      );
+      final downloadUrl = await ref.getDownloadURL();
+
+      if (!mounted) return;
+      await authService.updateProfile(photoUrl: downloadUrl);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile photo updated'),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload photo: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
   }
 
   Future<void> _saveProfile() async {
@@ -149,18 +223,19 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                       child: CircleAvatar(
                         radius: 20,
                         backgroundColor: Theme.of(context).colorScheme.primary,
-                        child: IconButton(
-                          icon: const Icon(Icons.camera_alt, size: 20),
-                          color: Colors.white,
-                          onPressed: () {
-                            // TODO: Implement photo upload
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Photo upload coming soon!'),
+                        child: _isUploadingPhoto
+                            ? const Padding(
+                                padding: EdgeInsets.all(8),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : IconButton(
+                                icon: const Icon(Icons.camera_alt, size: 20),
+                                color: Colors.white,
+                                onPressed: _pickAndUploadPhoto,
                               ),
-                            );
-                          },
-                        ),
                       ),
                     ),
                   ],
@@ -224,7 +299,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                initialValue: _selectedCountry,
+                initialValue: _countries.contains(_selectedCountry) ? _selectedCountry : null,
                 decoration: const InputDecoration(
                   labelText: 'Country',
                   prefixIcon: Icon(Icons.flag_outlined),
@@ -242,7 +317,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                initialValue: _selectedCurrency,
+                initialValue: _currencies.contains(_selectedCurrency) ? _selectedCurrency : null,
                 decoration: const InputDecoration(
                   labelText: 'Default Currency',
                   prefixIcon: Icon(Icons.attach_money),

@@ -121,6 +121,11 @@ class PortfolioService extends ChangeNotifier {
     refreshPrices();
   }
 
+  Future<void> forceRefreshPrices() async {
+    _stockApi.clearCache();
+    await refreshPrices();
+  }
+
   Future<void> refreshPrices() async {
     final uid = _uid;
     if (uid == null || _isRefreshingPrices) return;

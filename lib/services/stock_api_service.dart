@@ -18,6 +18,11 @@ class StockApiService {
   final Map<String, _CacheEntry<double>> _cryptoCache = {};
   DateTime? _lastAlphaVantageCall;
 
+  void clearCache() {
+    _stockCache.clear();
+    _cryptoCache.clear();
+  }
+
   static const Map<String, String> _cryptoSymbolToId = {
     'BTC': 'bitcoin',
     'ETH': 'ethereum',
