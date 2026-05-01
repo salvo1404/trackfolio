@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
@@ -68,12 +69,20 @@ class TabbedDashboardPage extends StatelessWidget {
           automaticallyImplyLeading: false,
           actions: [
             Builder(
-              builder: (context) => IconButton(
-                icon: const Icon(Icons.account_circle, size: 28),
-                onPressed: () {
-                  Scaffold.of(context).openEndDrawer();
-                },
-              ),
+              builder: (context) {
+                final user = context.watch<AuthService>().currentUser;
+                return IconButton(
+                  icon: user?.photoUrl != null
+                      ? CircleAvatar(
+                          radius: 14,
+                          backgroundImage: MemoryImage(base64Decode(user!.photoUrl!)),
+                        )
+                      : const Icon(Icons.account_circle, size: 28),
+                  onPressed: () {
+                    Scaffold.of(context).openEndDrawer();
+                  },
+                );
+              },
             ),
           ],
         ),
@@ -238,7 +247,7 @@ class _ProfileDrawerState extends State<_ProfileDrawer> {
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
               backgroundImage: user?.photoUrl != null
-                  ? NetworkImage(user!.photoUrl!)
+                  ? MemoryImage(base64Decode(user!.photoUrl!))
                   : null,
               child: user?.photoUrl == null
                   ? Icon(

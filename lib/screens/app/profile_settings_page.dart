@@ -1,7 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import '../../services/auth_service.dart';
 import '../../utils/theme.dart';
 
@@ -105,19 +107,11 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
     try {
       final bytes = await picked.readAsBytes();
-      final ref = FirebaseStorage.instance.ref('profile_photos/$uid.jpg');
-      final uploadTask = ref.putData(
-        bytes,
-        SettableMetadata(contentType: 'image/jpeg'),
-      );
-      await uploadTask.timeout(
-        const Duration(seconds: 30),
-        onTimeout: () => throw Exception('Upload timed out'),
-      );
-      final downloadUrl = await ref.getDownloadURL();
+      final croppedBytes = await _cropToSquare(bytes);
+      final base64Image = base64Encode(croppedBytes);
 
       if (!mounted) return;
-      await authService.updateProfile(photoUrl: downloadUrl);
+      await authService.updateProfile(photoUrl: base64Image);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -139,6 +133,33 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     } finally {
       if (mounted) setState(() => _isUploadingPhoto = false);
     }
+  }
+
+  Future<List<int>> _cropToSquare(List<int> imageBytes) async {
+    final codec = await ui.instantiateImageCodec(
+      imageBytes is Uint8List ? imageBytes : Uint8List.fromList(imageBytes),
+    );
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+
+    final side = image.width < image.height ? image.width : image.height;
+    final offsetX = (image.width - side) ~/ 2;
+    final offsetY = (image.height - side) ~/ 2;
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(offsetX.toDouble(), offsetY.toDouble(), side.toDouble(), side.toDouble()),
+      Rect.fromLTWH(0, 0, side.toDouble(), side.toDouble()),
+      Paint(),
+    );
+    final picture = recorder.endRecording();
+    final cropped = await picture.toImage(side, side);
+    final byteData = await cropped.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    cropped.dispose();
+    return byteData!.buffer.asUint8List();
   }
 
   Future<void> _saveProfile() async {
@@ -207,7 +228,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                       radius: 60,
                       backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                       backgroundImage: user?.photoUrl != null
-                          ? NetworkImage(user!.photoUrl!)
+                          ? MemoryImage(base64Decode(user!.photoUrl!))
                           : null,
                       child: user?.photoUrl == null
                           ? Icon(
@@ -231,10 +252,13 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                                   color: Colors.white,
                                 ),
                               )
-                            : IconButton(
-                                icon: const Icon(Icons.camera_alt, size: 20),
-                                color: Colors.white,
-                                onPressed: _pickAndUploadPhoto,
+                            : Tooltip(
+                                message: 'Max 512x512 px, auto-cropped to square',
+                                child: IconButton(
+                                  icon: const Icon(Icons.camera_alt, size: 20),
+                                  color: Colors.white,
+                                  onPressed: _pickAndUploadPhoto,
+                                ),
                               ),
                       ),
                     ),
