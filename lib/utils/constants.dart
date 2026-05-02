@@ -30,15 +30,16 @@ class AppConstants {
 
   // Budget Categories
   static const List<String> budgetCategories = [
-    'Housing',
-    'Transportation',
-    'Food & Dining',
-    'Shopping',
-    'Entertainment',
-    'Healthcare',
-    'Utilities',
-    'Savings',
-    'Investments',
-    'Other',
+    'Living',
+    'Communication',
+    'Health',
+    'Transport',
+    'Beauty',
+    'Tech',
+    'Fitness',
+    'Finance',
+    'Groceries',
+    'Fun',
+    'Subscription',
   ];
 }

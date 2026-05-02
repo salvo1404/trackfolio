@@ -154,25 +154,23 @@ class DashboardPage extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  '${currencyFormatter.format(budget.spent)} / ${currencyFormatter.format(budget.amount)}',
+                                  '${budget.currency} ${budget.amount.toStringAsFixed(2)}',
                                   style: TextStyle(
-                                    color: budget.isOverBudget
-                                        ? AppTheme.errorColor
-                                        : Colors.grey[600],
+                                    color: Colors.grey[600],
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            LinearProgressIndicator(
-                              value: budget.percentUsed / 100,
-                              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                              valueColor: AlwaysStoppedAnimation(
-                                budget.isOverBudget
-                                    ? AppTheme.errorColor
-                                    : AppTheme.successColor,
+                            if (budget.paymentMethod.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                budget.paymentMethod,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[500],
+                                ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ),

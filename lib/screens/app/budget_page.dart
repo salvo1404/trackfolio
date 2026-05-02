@@ -2,11 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/budget.dart';
 import '../../services/portfolio_service.dart';
-import '../../services/auth_service.dart';
-import '../../services/currency_service.dart';
 import '../../utils/constants.dart';
-import '../../utils/theme.dart';
-import '../../utils/currency_formatter.dart';
 
 class BudgetPage extends StatelessWidget {
   const BudgetPage({super.key});
@@ -14,9 +10,6 @@ class BudgetPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final portfolioService = context.watch<PortfolioService>();
-    final authService = context.watch<AuthService>();
-    final currencyService = context.watch<CurrencyService>();
-    final currencyFormatter = CurrencyFormatter(currencyService, authService.currentUser);
 
     return Scaffold(
       appBar: AppBar(
@@ -87,36 +80,14 @@ class BudgetPage extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Spent',
+                                    'Amount',
                                     style: TextStyle(
                                       color: Colors.grey[600],
                                       fontSize: 12,
                                     ),
                                   ),
                                   Text(
-                                    currencyFormatter.format(budget.spent),
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: budget.isOverBudget
-                                          ? AppTheme.errorColor
-                                          : AppTheme.successColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    'Budget',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Text(
-                                    currencyFormatter.format(budget.amount),
+                                    '${budget.currency} ${budget.amount.toStringAsFixed(2)}',
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -124,48 +95,27 @@ class BudgetPage extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    'Remaining',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 12,
+                              if (budget.paymentMethod.isNotEmpty)
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      'Payment',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    currencyFormatter.format(budget.remaining),
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: budget.remaining >= 0
-                                          ? AppTheme.successColor
-                                          : AppTheme.errorColor,
+                                    Text(
+                                      budget.paymentMethod,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                ),
                             ],
-                          ),
-                          const SizedBox(height: 12),
-                          LinearProgressIndicator(
-                            value: (budget.percentUsed / 100).clamp(0.0, 1.0),
-                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                            valueColor: AlwaysStoppedAnimation(
-                              budget.isOverBudget
-                                  ? AppTheme.errorColor
-                                  : AppTheme.successColor,
-                            ),
-                            minHeight: 8,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${budget.percentUsed.toStringAsFixed(1)}% used',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
-                            ),
                           ),
                         ],
                       ),
@@ -205,26 +155,38 @@ class _BudgetDialogState extends State<_BudgetDialog> {
   final _formKey = GlobalKey<FormState>();
   late String _category;
   late String _period;
+  late String _currency;
+  late TextEditingController _nameController;
   late TextEditingController _amountController;
-  late TextEditingController _spentController;
+  late TextEditingController _paymentMethodController;
+
+  final List<String> _currencies = [
+    'USD', 'EUR', 'GBP', 'JPY', 'CNY', 'INR',
+    'AUD', 'CAD', 'CHF', 'BRL', 'ZAR', 'MXN', 'AED',
+  ];
 
   @override
   void initState() {
     super.initState();
     _category = widget.budget?.category ?? AppConstants.budgetCategories.first;
     _period = widget.budget?.period ?? 'monthly';
+    _currency = widget.budget?.currency ?? 'USD';
+    _nameController = TextEditingController(
+      text: widget.budget?.name ?? '',
+    );
     _amountController = TextEditingController(
       text: widget.budget?.amount.toString() ?? '',
     );
-    _spentController = TextEditingController(
-      text: widget.budget?.spent.toString() ?? '0',
+    _paymentMethodController = TextEditingController(
+      text: widget.budget?.paymentMethod ?? '',
     );
   }
 
   @override
   void dispose() {
+    _nameController.dispose();
     _amountController.dispose();
-    _spentController.dispose();
+    _paymentMethodController.dispose();
     super.dispose();
   }
 
@@ -236,9 +198,11 @@ class _BudgetDialogState extends State<_BudgetDialog> {
       id: widget.budget?.id ??
           DateTime.now().millisecondsSinceEpoch.toString(),
       category: _category,
+      name: _nameController.text.trim(),
       amount: double.parse(_amountController.text),
       period: _period,
-      spent: double.parse(_spentController.text),
+      currency: _currency,
+      paymentMethod: _paymentMethodController.text.trim(),
       createdAt: widget.budget?.createdAt ?? DateTime.now(),
     );
 
@@ -271,21 +235,30 @@ class _BudgetDialogState extends State<_BudgetDialog> {
               DropdownButtonFormField<String>(
                 initialValue: _category,
                 decoration: const InputDecoration(labelText: 'Category'),
-                items: AppConstants.budgetCategories
-                    .map((cat) => DropdownMenuItem(
-                          value: cat,
-                          child: Text(cat),
-                        ))
-                    .toList(),
+                items: [
+                  if (!AppConstants.budgetCategories.contains(_category))
+                    DropdownMenuItem(value: _category, child: Text(_category)),
+                  ...AppConstants.budgetCategories
+                      .map((cat) => DropdownMenuItem(
+                            value: cat,
+                            child: Text(cat),
+                          )),
+                ],
                 onChanged: (value) {
                   if (value != null) setState(() => _category = value);
                 },
               ),
               const SizedBox(height: 16),
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _period,
                 decoration: const InputDecoration(labelText: 'Period'),
-                items: ['monthly', 'quarterly', 'yearly']
+                items: ['weekly', 'monthly', 'quarterly', 'yearly']
                     .map((period) => DropdownMenuItem(
                           value: period,
                           child: Text(period),
@@ -293,6 +266,20 @@ class _BudgetDialogState extends State<_BudgetDialog> {
                     .toList(),
                 onChanged: (value) {
                   if (value != null) setState(() => _period = value);
+                },
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _currency,
+                decoration: const InputDecoration(labelText: 'Currency'),
+                items: _currencies
+                    .map((c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(c),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) setState(() => _currency = value);
                 },
               ),
               const SizedBox(height: 16),
@@ -304,10 +291,9 @@ class _BudgetDialogState extends State<_BudgetDialog> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _spentController,
-                decoration: const InputDecoration(labelText: 'Spent'),
-                keyboardType: TextInputType.number,
-                validator: (v) => v?.isEmpty == true ? 'Required' : null,
+                controller: _paymentMethodController,
+                decoration: const InputDecoration(labelText: 'Payment Method'),
+                textCapitalization: TextCapitalization.words,
               ),
             ],
           ),

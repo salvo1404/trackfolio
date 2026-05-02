@@ -2,11 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/budget.dart';
 import '../services/portfolio_service.dart';
-import '../services/auth_service.dart';
-import '../services/currency_service.dart';
 import '../utils/constants.dart';
-import '../utils/theme.dart';
-import '../utils/currency_formatter.dart';
 
 class BudgetsTab extends StatelessWidget {
   const BudgetsTab({super.key});
@@ -14,12 +10,6 @@ class BudgetsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final portfolioService = context.watch<PortfolioService>();
-    final authService = context.watch<AuthService>();
-    final currencyService = context.watch<CurrencyService>();
-    final currencyFormatter = CurrencyFormatter(
-      currencyService,
-      authService.currentUser,
-    );
 
     return Container(
       decoration: BoxDecoration(
@@ -151,6 +141,16 @@ class BudgetsTab extends StatelessWidget {
                               ),
                             ],
                           ),
+                          if (budget.name.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              budget.name,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 16),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -159,36 +159,14 @@ class BudgetsTab extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Spent',
+                                    'Amount',
                                     style: TextStyle(
                                       color: Colors.grey[600],
                                       fontSize: 12,
                                     ),
                                   ),
                                   Text(
-                                    currencyFormatter.format(budget.spent),
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: budget.isOverBudget
-                                          ? AppTheme.errorColor
-                                          : AppTheme.successColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    'Budget',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Text(
-                                    currencyFormatter.format(budget.amount),
+                                    '${budget.currency} ${budget.amount.toStringAsFixed(2)}',
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -196,48 +174,27 @@ class BudgetsTab extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    'Remaining',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 12,
+                              if (budget.paymentMethod.isNotEmpty)
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      'Payment',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    currencyFormatter.format(budget.remaining),
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: budget.remaining >= 0
-                                          ? AppTheme.successColor
-                                          : AppTheme.errorColor,
+                                    Text(
+                                      budget.paymentMethod,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                ),
                             ],
-                          ),
-                          const SizedBox(height: 12),
-                          LinearProgressIndicator(
-                            value: (budget.percentUsed / 100).clamp(0.0, 1.0),
-                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                            valueColor: AlwaysStoppedAnimation(
-                              budget.isOverBudget
-                                  ? AppTheme.errorColor
-                                  : AppTheme.successColor,
-                            ),
-                            minHeight: 8,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${budget.percentUsed.toStringAsFixed(1)}% used',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
-                            ),
                           ),
                         ],
                       ),
@@ -274,29 +231,38 @@ class _BudgetDialogState extends State<_BudgetDialog> {
   final _formKey = GlobalKey<FormState>();
   late String _category;
   late String _period;
+  late String _currency;
+  late TextEditingController _nameController;
   late TextEditingController _amountController;
-  late TextEditingController _spentController;
+  late TextEditingController _paymentMethodController;
+
+  final List<String> _currencies = [
+    'USD', 'EUR', 'GBP', 'JPY', 'CNY', 'INR',
+    'AUD', 'CAD', 'CHF', 'BRL', 'ZAR', 'MXN', 'AED',
+  ];
 
   @override
   void initState() {
     super.initState();
-    final budgetCategory = widget.budget?.category;
-    _category = (budgetCategory != null && AppConstants.budgetCategories.contains(budgetCategory))
-        ? budgetCategory
-        : AppConstants.budgetCategories.first;
+    _category = widget.budget?.category ?? AppConstants.budgetCategories.first;
     _period = widget.budget?.period ?? 'monthly';
+    _currency = widget.budget?.currency ?? 'USD';
+    _nameController = TextEditingController(
+      text: widget.budget?.name ?? '',
+    );
     _amountController = TextEditingController(
       text: widget.budget?.amount.toString() ?? '',
     );
-    _spentController = TextEditingController(
-      text: widget.budget?.spent.toString() ?? '0',
+    _paymentMethodController = TextEditingController(
+      text: widget.budget?.paymentMethod ?? '',
     );
   }
 
   @override
   void dispose() {
+    _nameController.dispose();
     _amountController.dispose();
-    _spentController.dispose();
+    _paymentMethodController.dispose();
     super.dispose();
   }
 
@@ -307,9 +273,11 @@ class _BudgetDialogState extends State<_BudgetDialog> {
     final budget = Budget(
       id: widget.budget?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
       category: _category,
+      name: _nameController.text.trim(),
       amount: double.parse(_amountController.text),
       period: _period,
-      spent: double.parse(_spentController.text),
+      currency: _currency,
+      paymentMethod: _paymentMethodController.text.trim(),
       createdAt: widget.budget?.createdAt ?? DateTime.now(),
     );
 
@@ -447,12 +415,29 @@ class _BudgetDialogState extends State<_BudgetDialog> {
                       hintText: 'Select category',
                       icon: Icons.category_outlined,
                     ),
-                    items: AppConstants.budgetCategories
-                        .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
-                        .toList(),
+                    items: [
+                      if (!AppConstants.budgetCategories.contains(_category))
+                        DropdownMenuItem(value: _category, child: Text(_category)),
+                      ...AppConstants.budgetCategories
+                          .map((cat) => DropdownMenuItem(value: cat, child: Text(cat))),
+                    ],
                     onChanged: (value) {
                       if (value != null) setState(() => _category = value);
                     },
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Name
+                  _buildLabel('Name'),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: _inputDecoration(
+                      context,
+                      hintText: 'e.g. Netflix, Rent, Gym',
+                      icon: Icons.label_outline,
+                    ),
+                    textCapitalization: TextCapitalization.words,
                   ),
                   const SizedBox(height: 20),
 
@@ -466,11 +451,30 @@ class _BudgetDialogState extends State<_BudgetDialog> {
                       hintText: 'Select period',
                       icon: Icons.calendar_month,
                     ),
-                    items: ['monthly', 'quarterly', 'yearly']
+                    items: ['weekly', 'monthly', 'quarterly', 'yearly']
                         .map((p) => DropdownMenuItem(value: p, child: Text(p)))
                         .toList(),
                     onChanged: (value) {
                       if (value != null) setState(() => _period = value);
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Currency
+                  _buildLabel('Currency'),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: _currency,
+                    decoration: _inputDecoration(
+                      context,
+                      hintText: 'Select currency',
+                      icon: Icons.attach_money,
+                    ),
+                    items: _currencies
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) setState(() => _currency = value);
                     },
                   ),
                   const SizedBox(height: 20),
@@ -483,25 +487,24 @@ class _BudgetDialogState extends State<_BudgetDialog> {
                     decoration: _inputDecoration(
                       context,
                       hintText: 'Enter budget amount',
-                      icon: Icons.attach_money,
+                      icon: Icons.account_balance_wallet_outlined,
                     ),
                     keyboardType: TextInputType.number,
                     validator: (v) => v?.isEmpty == true ? 'Required' : null,
                   ),
                   const SizedBox(height: 20),
 
-                  // Spent
-                  _buildLabel('Spent'),
+                  // Payment Method
+                  _buildLabel('Payment Method'),
                   const SizedBox(height: 8),
                   TextFormField(
-                    controller: _spentController,
+                    controller: _paymentMethodController,
                     decoration: _inputDecoration(
                       context,
-                      hintText: 'Amount spent so far',
-                      icon: Icons.shopping_cart_outlined,
+                      hintText: 'e.g. Credit Card, Bank Transfer',
+                      icon: Icons.payment_outlined,
                     ),
-                    keyboardType: TextInputType.number,
-                    validator: (v) => v?.isEmpty == true ? 'Required' : null,
+                    textCapitalization: TextCapitalization.words,
                   ),
                   const SizedBox(height: 32),
 

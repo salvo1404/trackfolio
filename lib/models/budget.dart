@@ -3,31 +3,33 @@ import 'dart:convert';
 class Budget {
   final String id;
   final String category;
+  final String name;
   final double amount;
-  final String period; // monthly, quarterly, yearly
-  final double spent;
+  final String period; // weekly, monthly, quarterly, yearly
+  final String currency;
+  final String paymentMethod;
   final DateTime createdAt;
 
   Budget({
     required this.id,
     required this.category,
+    this.name = '',
     required this.amount,
     required this.period,
-    required this.spent,
+    this.currency = 'USD',
+    this.paymentMethod = '',
     required this.createdAt,
   });
-
-  double get remaining => amount - spent;
-  double get percentUsed => amount > 0 ? (spent / amount) * 100 : 0;
-  bool get isOverBudget => spent > amount;
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'category': category,
+      'name': name,
       'amount': amount,
       'period': period,
-      'spent': spent,
+      'currency': currency,
+      'paymentMethod': paymentMethod,
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -36,9 +38,11 @@ class Budget {
     return Budget(
       id: json['id'],
       category: json['category'],
+      name: json['name'] ?? '',
       amount: (json['amount'] as num).toDouble(),
       period: json['period'],
-      spent: (json['spent'] as num).toDouble(),
+      currency: json['currency'] ?? 'USD',
+      paymentMethod: json['paymentMethod'] ?? '',
       createdAt: DateTime.parse(json['createdAt']),
     );
   }
@@ -52,17 +56,21 @@ class Budget {
   Budget copyWith({
     String? id,
     String? category,
+    String? name,
     double? amount,
     String? period,
-    double? spent,
+    String? currency,
+    String? paymentMethod,
     DateTime? createdAt,
   }) {
     return Budget(
       id: id ?? this.id,
       category: category ?? this.category,
+      name: name ?? this.name,
       amount: amount ?? this.amount,
       period: period ?? this.period,
-      spent: spent ?? this.spent,
+      currency: currency ?? this.currency,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
       createdAt: createdAt ?? this.createdAt,
     );
   }
