@@ -5,9 +5,11 @@
 *.swp
 .DS_Store
 .atom/
+.build/
 .buildlog/
 .history
 .svn/
+.swiftpm/
 migrate_working_dir/
 *.env
 
@@ -43,6 +45,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase config files (contain API keys)
+**/GoogleService-Info.plist
+**/google-services.json
 
 # Web related
 /web/assets/AssetManifest.bin

@@ -12,29 +12,20 @@ class DefaultFirebaseOptions {
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for android - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
+          'DefaultFirebaseOptions have not been configured for macos.',
         );
       case TargetPlatform.windows:
         throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
+          'DefaultFirebaseOptions have not been configured for windows.',
         );
       case TargetPlatform.linux:
         throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for linux - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
+          'DefaultFirebaseOptions have not been configured for linux.',
         );
       default:
         throw UnsupportedError(
@@ -49,6 +40,23 @@ class DefaultFirebaseOptions {
     messagingSenderId: '235464136837',
     projectId: 'trackfolio-db',
     authDomain: 'trackfolio-db.firebaseapp.com',
+    storageBucket: 'trackfolio-db.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: String.fromEnvironment('FIREBASE_IOS_API_KEY'),
+    appId: '1:235464136837:ios:07cf57cb1eb90711d931ec',
+    messagingSenderId: '235464136837',
+    projectId: 'trackfolio-db',
+    storageBucket: 'trackfolio-db.firebasestorage.app',
+    iosBundleId: 'com.infosb86.trackfolio',
+  );
+
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: String.fromEnvironment('FIREBASE_ANDROID_API_KEY'),
+    appId: '1:235464136837:android:3e61cbf0b70c2c7ed931ec',
+    messagingSenderId: '235464136837',
+    projectId: 'trackfolio-db',
     storageBucket: 'trackfolio-db.firebasestorage.app',
   );
 }
