@@ -73,35 +73,6 @@ class StockApiService {
     _prefs.remove(_cryptoTimestampKey);
   }
 
-  static const Map<String, String> _cryptoSymbolToId = {
-    'BTC': 'bitcoin',
-    'ETH': 'ethereum',
-    'SOL': 'solana',
-    'ADA': 'cardano',
-    'DOT': 'polkadot',
-    'DOGE': 'dogecoin',
-    'XRP': 'ripple',
-    'AVAX': 'avalanche-2',
-    'MATIC': 'matic-network',
-    'LINK': 'chainlink',
-    'UNI': 'uniswap',
-    'ATOM': 'cosmos',
-    'LTC': 'litecoin',
-    'BNB': 'binancecoin',
-    'SHIB': 'shiba-inu',
-    'ARB': 'arbitrum',
-    'OP': 'optimism',
-    'APT': 'aptos',
-    'SUI': 'sui',
-    'NEAR': 'near',
-    'FIL': 'filecoin',
-    'AAVE': 'aave',
-    'MKR': 'maker',
-    'CRO': 'crypto-com-chain',
-    'ALGO': 'algorand',
-    'XLM': 'stellar',
-    'PEPE': 'pepe',
-  };
 
   Future<Map<String, dynamic>?> lookupStock(String symbol) async {
     final cached = _stockCache[symbol];
@@ -201,6 +172,39 @@ class StockApiService {
     }
   }
 
+  Future<List<Map<String, String>>> searchCrypto(String keyword) async {
+    try {
+      final uri = Uri.parse(
+        '$_coingeckoUrl/search?query=${Uri.encodeComponent(keyword)}',
+      );
+
+      final response = await http.get(uri).timeout(
+        const Duration(seconds: 10),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data.containsKey('coins')) {
+          final coins = data['coins'] as List;
+          return coins.take(10).map((coin) {
+            return {
+              'id': coin['id']?.toString() ?? '',
+              'symbol': coin['symbol']?.toString().toUpperCase() ?? '',
+              'name': coin['name']?.toString() ?? '',
+              'market_cap_rank': coin['market_cap_rank']?.toString() ?? '',
+            };
+          }).toList();
+        }
+      }
+
+      return [];
+    } catch (e) {
+      debugPrint('Error searching crypto: $e');
+      return [];
+    }
+  }
+
   Future<void> _throttleAlphaVantage() async {
     if (_lastAlphaVantageCall != null) {
       final elapsed = DateTime.now().difference(_lastAlphaVantageCall!);
@@ -212,8 +216,7 @@ class StockApiService {
   }
 
   String _resolveCryptoId(String symbol) {
-    final upper = symbol.toUpperCase().trim();
-    return _cryptoSymbolToId[upper] ?? symbol.toLowerCase().trim();
+    return symbol.toLowerCase().trim();
   }
 
   Future<Map<String, double>> lookupCryptoPrices(List<String> symbols) async {

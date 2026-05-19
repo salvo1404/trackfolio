@@ -604,7 +604,12 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
     });
 
     try {
-      final results = await _stockApiService.searchSymbols(keyword);
+      final List<Map<String, String>> results;
+      if (_type == AppConstants.typeCrypto) {
+        results = await _stockApiService.searchCrypto(keyword);
+      } else {
+        results = await _stockApiService.searchSymbols(keyword);
+      }
 
       if (!mounted) return;
 
@@ -629,7 +634,8 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
   }
 
   Future<void> _selectSymbol(Map<String, String> match) async {
-    final symbol = match['symbol'] ?? '';
+    final isCrypto = _type == AppConstants.typeCrypto;
+    final symbol = isCrypto ? (match['id'] ?? '') : (match['symbol'] ?? '');
     final name = match['name'] ?? symbol;
     final currency = match['currency'] ?? '';
 
@@ -644,28 +650,45 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
         _nameController.text = name;
       }
 
-      // Auto-set currency if it matches a supported one
-      if (currency.isNotEmpty && _currencies.contains(currency)) {
+      if (!isCrypto && currency.isNotEmpty && _currencies.contains(currency)) {
         _currency = currency;
+      }
+      if (isCrypto) {
+        _currency = 'USD';
       }
     });
 
     try {
-      final stockData = await _stockApiService.lookupStock(symbol);
-
-      if (!mounted) return;
-
-      setState(() {
-        if (stockData != null && stockData['price'] != null) {
-          _suggestedPrice = stockData['price'] as double;
-          _currentValueController.text = _suggestedPrice!.toStringAsFixed(2);
-          _symbolLookupMessage = '$name - ${_suggestedPrice!.toStringAsFixed(2)} $currency';
-        } else {
-          _suggestedPrice = null;
-          _symbolLookupMessage = '$name selected. Enter current value manually.';
-        }
-        _isLoadingPrice = false;
-      });
+      if (isCrypto) {
+        final prices = await _stockApiService.lookupCryptoPrices([symbol]);
+        if (!mounted) return;
+        final price = prices[symbol];
+        setState(() {
+          if (price != null) {
+            _suggestedPrice = price;
+            _currentValueController.text = _suggestedPrice!.toStringAsFixed(2);
+            _symbolLookupMessage = '$name - \$${_suggestedPrice!.toStringAsFixed(2)}';
+          } else {
+            _suggestedPrice = null;
+            _symbolLookupMessage = '$name selected. Enter current value manually.';
+          }
+          _isLoadingPrice = false;
+        });
+      } else {
+        final stockData = await _stockApiService.lookupStock(symbol);
+        if (!mounted) return;
+        setState(() {
+          if (stockData != null && stockData['price'] != null) {
+            _suggestedPrice = stockData['price'] as double;
+            _currentValueController.text = _suggestedPrice!.toStringAsFixed(2);
+            _symbolLookupMessage = '$name - ${_suggestedPrice!.toStringAsFixed(2)} $currency';
+          } else {
+            _suggestedPrice = null;
+            _symbolLookupMessage = '$name selected. Enter current value manually.';
+          }
+          _isLoadingPrice = false;
+        });
+      }
     } catch (e) {
       if (!mounted) return;
 
@@ -742,7 +765,9 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
           TextFormField(
             controller: _symbolController,
             decoration: InputDecoration(
-              hintText: 'Search by name or symbol (e.g. AAPL, VUAA)',
+              hintText: _type == AppConstants.typeCrypto
+                  ? 'Search by name (e.g. Bitcoin, Solana)'
+                  : 'Search by name or symbol (e.g. AAPL, VUAA)',
               helperText: _isLoadingPrice
                   ? 'Fetching price...'
                   : _symbolLookupMessage,
@@ -792,7 +817,9 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
                 ),
               ),
             ),
-            textCapitalization: TextCapitalization.characters,
+            textCapitalization: _type == AppConstants.typeCrypto
+                ? TextCapitalization.none
+                : TextCapitalization.characters,
             onChanged: (value) {
               if (value.length >= 3) {
                 _searchSymbols(value);
@@ -834,7 +861,12 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
                 ),
                 itemBuilder: (context, index) {
                   final match = _searchResults[index];
-                  final typeLabel = match['type'] == 'ETF' ? 'ETF' : 'Stock';
+                  final isCrypto = _type == AppConstants.typeCrypto;
+                  final trailingText = isCrypto
+                      ? (match['market_cap_rank']?.isNotEmpty == true
+                          ? '#${match['market_cap_rank']}'
+                          : '')
+                      : '${match['type'] == 'ETF' ? 'ETF' : 'Stock'}  ${match['region']}  ${match['currency']}';
                   return ListTile(
                     dense: true,
                     visualDensity: VisualDensity.compact,
@@ -852,7 +884,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     trailing: Text(
-                      '$typeLabel  ${match['region']}  ${match['currency']}',
+                      trailingText,
                       style: TextStyle(
                         fontSize: 11,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
