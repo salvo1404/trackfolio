@@ -40,7 +40,7 @@ class PortfolioService extends ChangeNotifier {
   List<ShareTransaction> get shareTransactions => _shareTransactions;
 
   double get totalPortfolioValue {
-    return _portfolioItems.fold(0, (sum, item) {
+    return _portfolioItems.where((item) => item.dateSold == null).fold(0, (sum, item) {
       final valueInUSD = _currencyService.convertBetween(
         item.totalValue,
         item.currency,
@@ -51,7 +51,7 @@ class PortfolioService extends ChangeNotifier {
   }
 
   double get totalPortfolioCost {
-    return _portfolioItems.fold(0, (sum, item) {
+    return _portfolioItems.where((item) => item.dateSold == null).fold(0, (sum, item) {
       final costInUSD = _currencyService.convertBetween(
         item.totalCost,
         item.currency,
@@ -65,7 +65,7 @@ class PortfolioService extends ChangeNotifier {
 
   Map<String, double> get portfolioByType {
     final Map<String, double> result = {};
-    for (final item in _portfolioItems) {
+    for (final item in _portfolioItems.where((i) => i.dateSold == null)) {
       final valueInUSD = _currencyService.convertBetween(
         item.totalValue,
         item.currency,
@@ -171,14 +171,23 @@ class PortfolioService extends ChangeNotifier {
     final stockItems = priceable.where((i) => i.type == AppConstants.typeStocksAndETFs).toList();
     final uniqueSymbols = stockItems.map((i) => i.symbol!).toSet();
     final Map<String, double> stockPrices = {};
+    final List<String> failedSymbols = [];
     for (final symbol in uniqueSymbols) {
       try {
         final result = await _stockApi.lookupStock(symbol);
         if (result != null && result['price'] != null) {
           final price = (result['price'] as num).toDouble();
-          if (price > 0) stockPrices[symbol] = price;
+          if (price > 0) {
+            stockPrices[symbol] = price;
+          } else {
+            failedSymbols.add(symbol);
+          }
+        } else {
+          failedSymbols.add(symbol);
         }
-      } catch (_) {}
+      } catch (_) {
+        failedSymbols.add(symbol);
+      }
     }
     for (final item in stockItems) {
       final price = stockPrices[item.symbol!];
@@ -197,9 +206,13 @@ class PortfolioService extends ChangeNotifier {
     }
 
     _isRefreshingPrices = false;
-    _priceRefreshStatus = updated > 0
-        ? '$updated price${updated == 1 ? '' : 's'} updated'
-        : 'values are up to date';
+    if (failedSymbols.isNotEmpty) {
+      _priceRefreshStatus = 'Could not update: ${failedSymbols.join(', ')}';
+    } else {
+      _priceRefreshStatus = updated > 0
+          ? '$updated price${updated == 1 ? '' : 's'} updated'
+          : 'values are up to date';
+    }
     notifyListeners();
 
     // Clear the status message after a few seconds

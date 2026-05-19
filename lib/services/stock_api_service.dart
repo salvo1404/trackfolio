@@ -109,6 +109,16 @@ class StockApiService {
       return cached;
     }
 
+    final result = await _fetchFromAlphaVantage(symbol);
+
+    if (result != null) {
+      _stockCache[symbol] = result;
+      await _persistStockCache();
+    }
+    return result;
+  }
+
+  Future<Map<String, dynamic>?> _fetchFromAlphaVantage(String symbol) async {
     try {
       await _throttleAlphaVantage();
       final uri = Uri.parse(
@@ -125,38 +135,33 @@ class StockApiService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
+        if (data.containsKey('Note') ||
+            data.containsKey('Information') ||
+            data.containsKey('Error Message')) {
+          debugPrint('Alpha Vantage limit/error for $symbol: '
+              '${data['Note'] ?? data['Information'] ?? data['Error Message']}');
+          return null;
+        }
+
         if (data.containsKey('Global Quote')) {
           final quote = data['Global Quote'] as Map<String, dynamic>;
-
-          if (quote.isEmpty) {
-            _stockCache[symbol] = null;
-            await _persistStockCache();
-            return null;
-          }
+          if (quote.isEmpty) return null;
 
           final price = quote['05. price'];
           final symbolName = quote['01. symbol'];
 
           if (price != null && symbolName != null) {
-            final result = {
+            return {
               'symbol': symbolName,
               'price': double.tryParse(price.toString()) ?? 0.0,
               'name': symbolName,
             };
-            _stockCache[symbol] = result;
-            await _persistStockCache();
-            return result;
           }
         }
-
-        if (data.containsKey('Note') || data.containsKey('Error Message')) {
-          throw Exception(data['Note'] ?? data['Error Message']);
-        }
       }
-
       return null;
     } catch (e) {
-      debugPrint('Error fetching stock data: $e');
+      debugPrint('Alpha Vantage error for $symbol: $e');
       return null;
     }
   }

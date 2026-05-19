@@ -140,15 +140,14 @@ class _ShareTrackerTabState extends State<ShareTrackerTab> {
       itemsByType.putIfAbsent(item.type, () => []).add(item);
     }
 
-    // Calculate total values for each type and sort
+    // Calculate total values for each type and sort (exclude sold items)
     final typeData = <Map<String, dynamic>>[];
     for (final entry in itemsByType.entries) {
       final type = entry.key;
       final items = entry.value;
-      final totalValue = items.fold<double>(
+      final totalValue = items.where((item) => item.dateSold == null).fold<double>(
         0,
         (sum, item) {
-          // Convert item's value from its currency to USD
           final valueInUSD = currencyService.convertBetween(
             item.totalValue,
             item.currency,

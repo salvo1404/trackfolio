@@ -671,15 +671,15 @@ class PortfolioTab extends StatelessWidget {
       itemsByType.putIfAbsent(item.type, () => []).add(item);
     }
 
-    // Calculate totals for each type
+    // Calculate totals for each type (exclude sold items)
     final typeData = <Map<String, dynamic>>[];
     for (final entry in itemsByType.entries) {
       final type = entry.key;
       final items = entry.value;
-      final totalValue = items.fold<double>(
+      final activeItems = items.where((item) => item.dateSold == null);
+      final totalValue = activeItems.fold<double>(
         0,
         (sum, item) {
-          // Convert item's value from its currency to USD
           final valueInUSD = currencyService.convertBetween(
             item.totalValue,
             item.currency,
@@ -688,10 +688,9 @@ class PortfolioTab extends StatelessWidget {
           return sum + valueInUSD;
         },
       );
-      final totalCost = items.fold<double>(
+      final totalCost = activeItems.fold<double>(
         0,
         (sum, item) {
-          // Convert item's cost from its currency to USD
           final costInUSD = currencyService.convertBetween(
             item.totalCost,
             item.currency,
@@ -887,9 +886,9 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
   }
 
   List<Widget> _buildAggregatedItems(BuildContext context) {
-    // Group items by name to aggregate duplicates
+    // Group active items by name to aggregate duplicates
     final grouped = <String, List<PortfolioItem>>{};
-    for (final item in widget.items) {
+    for (final item in widget.items.where((i) => i.dateSold == null)) {
       grouped.putIfAbsent(item.name, () => []).add(item);
     }
 
