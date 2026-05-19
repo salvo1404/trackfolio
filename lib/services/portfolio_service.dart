@@ -40,7 +40,7 @@ class PortfolioService extends ChangeNotifier {
   List<ShareTransaction> get shareTransactions => _shareTransactions;
 
   double get totalPortfolioValue {
-    return _portfolioItems.fold(0, (sum, item) {
+    return _portfolioItems.where((item) => item.dateSold == null).fold(0, (sum, item) {
       final valueInUSD = _currencyService.convertBetween(
         item.totalValue,
         item.currency,
@@ -51,7 +51,7 @@ class PortfolioService extends ChangeNotifier {
   }
 
   double get totalPortfolioCost {
-    return _portfolioItems.fold(0, (sum, item) {
+    return _portfolioItems.where((item) => item.dateSold == null).fold(0, (sum, item) {
       final costInUSD = _currencyService.convertBetween(
         item.totalCost,
         item.currency,
@@ -65,7 +65,7 @@ class PortfolioService extends ChangeNotifier {
 
   Map<String, double> get portfolioByType {
     final Map<String, double> result = {};
-    for (final item in _portfolioItems) {
+    for (final item in _portfolioItems.where((i) => i.dateSold == null)) {
       final valueInUSD = _currencyService.convertBetween(
         item.totalValue,
         item.currency,
