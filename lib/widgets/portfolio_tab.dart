@@ -882,52 +882,46 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
                       ],
                     ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      widget.totalMortgageRemaining > 0
-                          ? Text.rich(
-                              TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: widget.currencyFormatter.format(widget.totalDisplayValue),
-                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                  ),
-                                  TextSpan(
-                                    text: ' (−${widget.currencyFormatter.format(widget.totalMortgageRemaining)})',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.red,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : Text(
-                              widget.currencyFormatter.format(widget.totalDisplayValue),
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          widget.currencyFormatter.format(widget.totalDisplayValue),
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.end,
+                        ),
+                        if (widget.totalMortgageRemaining > 0)
+                          Text(
+                            '−${widget.currencyFormatter.format(widget.totalMortgageRemaining)}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.red,
                             ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: gainLossColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          '${totalGainLoss >= 0 ? '+' : ''}${widget.currencyFormatter.format(totalGainLoss)}',
-                          style: TextStyle(
-                            color: gainLossColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            textAlign: TextAlign.end,
+                          ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: gainLossColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '${totalGainLoss >= 0 ? '+' : ''}${widget.currencyFormatter.format(totalGainLoss)}',
+                            style: TextStyle(
+                              color: gainLossColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(width: 8),
                   AnimatedRotation(
