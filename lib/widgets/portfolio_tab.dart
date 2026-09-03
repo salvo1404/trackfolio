@@ -474,6 +474,9 @@ class PortfolioTab extends StatelessWidget {
     PortfolioService portfolioService,
     CurrencyFormatter currencyFormatter,
   ) {
+    final grossByType = portfolioService.grossPortfolioByType;
+    final mortgageByType = portfolioService.mortgageRemainingByType;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWideScreen = constraints.maxWidth > 600;
@@ -515,6 +518,8 @@ class PortfolioTab extends StatelessWidget {
                       child: _buildLegend(
                         portfolioService.portfolioByType,
                         currencyFormatter,
+                        grossByType: grossByType,
+                        mortgageByType: mortgageByType,
                       ),
                     ),
                   ],
@@ -547,7 +552,12 @@ class PortfolioTab extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              _buildLegend(portfolioService.portfolioByType, currencyFormatter),
+              _buildLegend(
+                portfolioService.portfolioByType,
+                currencyFormatter,
+                grossByType: grossByType,
+                mortgageByType: mortgageByType,
+              ),
             ],
           );
         }
@@ -599,22 +609,31 @@ class PortfolioTab extends StatelessWidget {
 
   Widget _buildLegend(
     Map<String, double> portfolioByType,
-    CurrencyFormatter currencyFormatter,
-  ) {
+    CurrencyFormatter currencyFormatter, {
+    Map<String, double>? grossByType,
+    Map<String, double>? mortgageByType,
+  }) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: portfolioByType.entries.map((entry) {
+        final type = entry.key;
+        final mortgage = mortgageByType?[type];
+        final gross = grossByType?[type];
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: AppTheme.getPortfolioTypeColor(entry.key),
-                  shape: BoxShape.circle,
+              Padding(
+                padding: const EdgeInsets.only(top: 3),
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: AppTheme.getPortfolioTypeColor(type),
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -623,16 +642,37 @@ class PortfolioTab extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      entry.key,
+                      type,
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    Text(
-                      currencyFormatter.format(entry.value),
-                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                    ),
+                    if (mortgage != null && mortgage > 0 && gross != null) ...[
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: currencyFormatter.format(gross),
+                              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                            ),
+                            TextSpan(
+                              text: ' (−${currencyFormatter.format(mortgage)})',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.red,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      Text(
+                        currencyFormatter.format(entry.value),
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -680,24 +720,33 @@ class PortfolioTab extends StatelessWidget {
       final totalValue = activeItems.fold<double>(
         0,
         (sum, item) {
-          final valueInUSD = currencyService.convertBetween(
-            item.totalValue,
-            item.currency,
-            'USD',
-          );
-          return sum + valueInUSD;
+          final value = item.type == 'Real Estate'
+              ? item.netEquityValue
+              : item.totalValue;
+          return sum + currencyService.convertBetween(value, item.currency, 'USD');
         },
       );
       final totalCost = activeItems.fold<double>(
         0,
         (sum, item) {
-          final costInUSD = currencyService.convertBetween(
-            item.totalCost,
-            item.currency,
-            'USD',
-          );
-          return sum + costInUSD;
+          final cost = item.type == 'Real Estate' && item.mortgagePrincipal != null
+              ? (item.purchasePrice - item.mortgagePrincipal!).clamp(0.0, double.infinity)
+              : item.totalCost;
+          return sum + currencyService.convertBetween(cost, item.currency, 'USD');
         },
+      );
+
+      final totalMortgageRemaining = activeItems.fold<double>(
+        0,
+        (sum, item) {
+          final remaining = item.mortgageRemaining;
+          if (remaining == null) return sum;
+          return sum + currencyService.convertBetween(remaining, item.currency, 'USD');
+        },
+      );
+      final totalDisplayValue = activeItems.fold<double>(
+        0,
+        (sum, item) => sum + currencyService.convertBetween(item.totalValue, item.currency, 'USD'),
       );
 
       typeData.add({
@@ -705,6 +754,8 @@ class PortfolioTab extends StatelessWidget {
         'items': items,
         'totalValue': totalValue,
         'totalCost': totalCost,
+        'totalMortgageRemaining': totalMortgageRemaining,
+        'totalDisplayValue': totalDisplayValue,
       });
     }
 
@@ -718,6 +769,8 @@ class PortfolioTab extends StatelessWidget {
       final items = data['items'] as List<PortfolioItem>;
       final totalValue = data['totalValue'] as double;
       final totalCost = data['totalCost'] as double;
+      final totalMortgageRemaining = data['totalMortgageRemaining'] as double;
+      final totalDisplayValue = data['totalDisplayValue'] as double;
 
       widgets.add(
         _ExpandableTypeCard(
@@ -725,6 +778,8 @@ class PortfolioTab extends StatelessWidget {
           items: items,
           totalValue: totalValue,
           totalCost: totalCost,
+          totalMortgageRemaining: totalMortgageRemaining,
+          totalDisplayValue: totalDisplayValue,
           currencyFormatter: currencyFormatter,
           currencyService: currencyService,
           icon: _getIconForType(type),
@@ -741,6 +796,8 @@ class _ExpandableTypeCard extends StatefulWidget {
   final List<PortfolioItem> items;
   final double totalValue;
   final double totalCost;
+  final double totalMortgageRemaining;
+  final double totalDisplayValue;
   final CurrencyFormatter currencyFormatter;
   final CurrencyService currencyService;
   final IconData icon;
@@ -750,6 +807,8 @@ class _ExpandableTypeCard extends StatefulWidget {
     required this.items,
     required this.totalValue,
     required this.totalCost,
+    required this.totalMortgageRemaining,
+    required this.totalDisplayValue,
     required this.currencyFormatter,
     required this.currencyService,
     required this.icon,
@@ -826,13 +885,29 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        widget.currencyFormatter.format(widget.totalValue),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      widget.totalMortgageRemaining > 0
+                          ? Text.rich(
+                              TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: widget.currencyFormatter.format(widget.totalDisplayValue),
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  ),
+                                  TextSpan(
+                                    text: ' (−${widget.currencyFormatter.format(widget.totalMortgageRemaining)})',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : Text(
+                              widget.currencyFormatter.format(widget.totalDisplayValue),
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
                       const SizedBox(height: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -895,28 +970,33 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
     final rows = grouped.entries.map((entry) {
       final items = entry.value;
       double totalValueUSD = 0;
+      double totalDisplayUSD = 0;
       double totalCostUSD = 0;
       double totalQty = 0;
+      double totalMortgageUSD = 0;
 
       for (final item in items) {
-        totalValueUSD += widget.currencyService.convertBetween(
-          item.totalValue,
-          item.currency,
-          'USD',
-        );
-        totalCostUSD += widget.currencyService.convertBetween(
-          item.totalCost,
-          item.currency,
-          'USD',
-        );
+        final value = item.type == 'Real Estate' ? item.netEquityValue : item.totalValue;
+        final cost = item.type == 'Real Estate' && item.mortgagePrincipal != null
+            ? (item.purchasePrice - item.mortgagePrincipal!).clamp(0.0, double.infinity)
+            : item.totalCost;
+        totalValueUSD += widget.currencyService.convertBetween(value, item.currency, 'USD');
+        totalDisplayUSD += widget.currencyService.convertBetween(item.totalValue, item.currency, 'USD');
+        totalCostUSD += widget.currencyService.convertBetween(cost, item.currency, 'USD');
         totalQty += item.quantity;
+        final remaining = item.mortgageRemaining;
+        if (remaining != null) {
+          totalMortgageUSD += widget.currencyService.convertBetween(remaining, item.currency, 'USD');
+        }
       }
 
       return (
         name: entry.key,
         qty: totalQty,
         valueUSD: totalValueUSD,
+        displayUSD: totalDisplayUSD,
         gainLoss: totalValueUSD - totalCostUSD,
+        mortgageUSD: totalMortgageUSD,
       );
     }).toList();
 
@@ -954,13 +1034,29 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  widget.currencyFormatter.format(row.valueUSD),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                row.mortgageUSD > 0
+                    ? Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: widget.currencyFormatter.format(row.displayUSD),
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                            ),
+                            TextSpan(
+                              text: ' (−${widget.currencyFormatter.format(row.mortgageUSD)})',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.red,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Text(
+                        widget.currencyFormatter.format(row.displayUSD),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
                 const SizedBox(height: 2),
                 Container(
                   padding: const EdgeInsets.symmetric(

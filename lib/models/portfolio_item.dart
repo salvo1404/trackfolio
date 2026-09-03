@@ -13,6 +13,9 @@ class PortfolioItem {
   final double? fees; // Transaction fees
   final String? symbol; // Ticker symbol (for stocks/ETFs/crypto)
   final DateTime? dateSold; // Date the asset was sold
+  final double? mortgagePrincipal; // Original mortgage amount
+  final int? mortgageLengthYears; // Mortgage term in years
+  final double? monthlyRepayment; // Monthly mortgage payment
 
   PortfolioItem({
     required this.id,
@@ -27,12 +30,31 @@ class PortfolioItem {
     this.fees = 0.0,
     this.symbol,
     this.dateSold,
+    this.mortgagePrincipal,
+    this.mortgageLengthYears,
+    this.monthlyRepayment,
   });
 
   double get totalValue => quantity * currentValue;
   double get totalCost => quantity * purchasePrice + (fees ?? 0.0);
   double get gainLoss => totalValue - totalCost;
   double get gainLossPercent => totalCost > 0 ? (gainLoss / totalCost) * 100 : 0;
+
+  double? get mortgageRemaining {
+    if (mortgagePrincipal == null || monthlyRepayment == null) return null;
+    final now = DateTime.now();
+    final monthsPassed =
+        (now.year - purchaseDate.year) * 12 + (now.month - purchaseDate.month);
+    final remaining = mortgagePrincipal! - (monthlyRepayment! * monthsPassed);
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  double get netEquityValue {
+    final remaining = mortgageRemaining;
+    if (remaining == null) return totalValue;
+    final equity = totalValue - remaining;
+    return equity < 0 ? 0 : equity;
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -48,6 +70,9 @@ class PortfolioItem {
       'fees': fees ?? 0.0,
       'symbol': symbol,
       'dateSold': dateSold?.toIso8601String(),
+      'mortgagePrincipal': mortgagePrincipal,
+      'mortgageLengthYears': mortgageLengthYears,
+      'monthlyRepayment': monthlyRepayment,
     };
   }
 
@@ -65,6 +90,9 @@ class PortfolioItem {
       fees: (json['fees'] as num?)?.toDouble() ?? 0.0,
       symbol: json['symbol'] as String?,
       dateSold: json['dateSold'] != null ? DateTime.parse(json['dateSold']) : null,
+      mortgagePrincipal: (json['mortgagePrincipal'] as num?)?.toDouble(),
+      mortgageLengthYears: (json['mortgageLengthYears'] as num?)?.toInt(),
+      monthlyRepayment: (json['monthlyRepayment'] as num?)?.toDouble(),
     );
   }
 
@@ -87,6 +115,9 @@ class PortfolioItem {
     double? fees,
     String? symbol,
     DateTime? dateSold,
+    double? mortgagePrincipal,
+    int? mortgageLengthYears,
+    double? monthlyRepayment,
   }) {
     return PortfolioItem(
       id: id ?? this.id,
@@ -101,6 +132,9 @@ class PortfolioItem {
       fees: fees ?? this.fees,
       symbol: symbol ?? this.symbol,
       dateSold: dateSold ?? this.dateSold,
+      mortgagePrincipal: mortgagePrincipal ?? this.mortgagePrincipal,
+      mortgageLengthYears: mortgageLengthYears ?? this.mortgageLengthYears,
+      monthlyRepayment: monthlyRepayment ?? this.monthlyRepayment,
     );
   }
 }

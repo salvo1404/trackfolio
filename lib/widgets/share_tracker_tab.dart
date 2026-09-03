@@ -148,8 +148,11 @@ class _ShareTrackerTabState extends State<ShareTrackerTab> {
       final totalValue = items.where((item) => item.dateSold == null).fold<double>(
         0,
         (sum, item) {
+          final value = item.type == 'Real Estate'
+              ? item.netEquityValue
+              : item.totalValue;
           final valueInUSD = currencyService.convertBetween(
-            item.totalValue,
+            value,
             item.currency,
             'USD',
           );
@@ -361,12 +364,30 @@ class _ShareTrackerTabState extends State<ShareTrackerTab> {
                                 _detailChip('Cost', fmt(item.totalCost)),
                                 const SizedBox(width: 12),
                                 _detailChipColored(
-                                  'Total Value',
+                                  item.type == 'Real Estate' && item.mortgageRemaining != null
+                                      ? 'Market Value'
+                                      : 'Total Value',
                                   fmt(item.totalValue),
                                   gainLossColor,
                                 ),
                               ],
                             ),
+                            if (item.type == 'Real Estate' && item.mortgageRemaining != null) ...[
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  _detailChip('Mortgage Left', fmt(item.mortgageRemaining!)),
+                                  const SizedBox(width: 12),
+                                  _detailChip('Monthly', fmt(item.monthlyRepayment ?? 0)),
+                                  const SizedBox(width: 12),
+                                  _detailChipColored(
+                                    'Net Equity',
+                                    fmt(item.netEquityValue),
+                                    gainLossColor,
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
                         ],
                       );
@@ -529,6 +550,9 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
   late TextEditingController _purchasePriceController;
   late TextEditingController _currentValueController;
   late TextEditingController _feesController;
+  late TextEditingController _mortgagePrincipalController;
+  late TextEditingController _mortgageLengthYearsController;
+  late TextEditingController _monthlyRepaymentController;
   late DateTime _purchaseDate;
   DateTime? _dateSold;
   double? _suggestedPrice;
@@ -563,6 +587,15 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
     _feesController = TextEditingController(
       text: (widget.item?.fees ?? 0.0).toString(),
     );
+    _mortgagePrincipalController = TextEditingController(
+      text: widget.item?.mortgagePrincipal?.toString() ?? '',
+    );
+    _mortgageLengthYearsController = TextEditingController(
+      text: widget.item?.mortgageLengthYears?.toString() ?? '',
+    );
+    _monthlyRepaymentController = TextEditingController(
+      text: widget.item?.monthlyRepayment?.toString() ?? '',
+    );
     _purchaseDate = widget.item?.purchaseDate ?? DateTime.now();
     _dateSold = widget.item?.dateSold;
   }
@@ -575,6 +608,9 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
     _purchasePriceController.dispose();
     _currentValueController.dispose();
     _feesController.dispose();
+    _mortgagePrincipalController.dispose();
+    _mortgageLengthYearsController.dispose();
+    _monthlyRepaymentController.dispose();
     super.dispose();
   }
 
@@ -710,6 +746,9 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
         ? 1.0
         : double.parse(_quantityController.text);
 
+    final hasMortgage = _type == AppConstants.typeRealEstate &&
+        _mortgagePrincipalController.text.isNotEmpty;
+
     final item = PortfolioItem(
       id: widget.item?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
       type: _type,
@@ -725,6 +764,15 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
       fees: double.tryParse(_feesController.text) ?? 0.0,
       symbol: _symbolController.text.isNotEmpty ? _symbolController.text : null,
       dateSold: _dateSold,
+      mortgagePrincipal: hasMortgage
+          ? double.tryParse(_mortgagePrincipalController.text)
+          : null,
+      mortgageLengthYears: hasMortgage
+          ? int.tryParse(_mortgageLengthYearsController.text)
+          : null,
+      monthlyRepayment: hasMortgage
+          ? double.tryParse(_monthlyRepaymentController.text)
+          : null,
     );
 
     final isNew = widget.item == null;
@@ -1488,6 +1536,191 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
             ),
           ],
         ),
+      ],
+
+      // Mortgage section — Real Estate only
+      if (_type == AppConstants.typeRealEstate) ...[
+        const SizedBox(height: 28),
+        Row(
+          children: [
+            Icon(Icons.home_work_outlined, size: 18, color: Colors.grey[600]),
+            const SizedBox(width: 8),
+            Text(
+              'Mortgage (optional)',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey[700],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Net equity (current value − remaining mortgage) is shown in your portfolio.',
+          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+        ),
+        const SizedBox(height: 16),
+
+        // Mortgage Total
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Mortgage Total',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _mortgagePrincipalController,
+              decoration: InputDecoration(
+                hintText: 'Total mortgage amount',
+                prefixIcon: Icon(
+                  Icons.account_balance_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                ),
+              ),
+              keyboardType: TextInputType.number,
+              onChanged: (_) => setState(() {}),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        // Mortgage Length
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Length (years)',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _mortgageLengthYearsController,
+              decoration: InputDecoration(
+                hintText: 'e.g. 25',
+                prefixIcon: Icon(
+                  Icons.calendar_month_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                ),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        // Monthly Repayment
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Monthly Repayment',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _monthlyRepaymentController,
+              decoration: InputDecoration(
+                hintText: 'Monthly payment amount',
+                prefixIcon: Icon(
+                  Icons.payments_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                ),
+              ),
+              keyboardType: TextInputType.number,
+              onChanged: (_) => setState(() {}),
+            ),
+          ],
+        ),
+
+        // Live mortgage remaining preview
+        if (_mortgagePrincipalController.text.isNotEmpty &&
+            _monthlyRepaymentController.text.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Builder(builder: (context) {
+            final cs = context.read<CurrencyService>();
+            final principal = double.tryParse(_mortgagePrincipalController.text) ?? 0;
+            final monthly = double.tryParse(_monthlyRepaymentController.text) ?? 0;
+            final now = DateTime.now();
+            final monthsPassed =
+                (now.year - _purchaseDate.year) * 12 +
+                (now.month - _purchaseDate.month);
+            final remaining = (principal - monthly * monthsPassed).clamp(0.0, double.infinity);
+            final sym = cs.getSymbol(_currency);
+            String fmt(double v) => NumberFormat.currency(symbol: sym, decimalDigits: 2).format(v);
+            return Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                border: Border.all(color: Colors.orange[200]!),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange[700], size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Remaining today: ${fmt(remaining)}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange[800],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
       ],
     ];
   }
