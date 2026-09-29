@@ -41,25 +41,13 @@ class PortfolioService extends ChangeNotifier {
 
   double get totalPortfolioValue {
     return _portfolioItems.where((item) => item.dateSold == null).fold(0, (sum, item) {
-      final value = item.type == AppConstants.typeRealEstate
-          ? item.netEquityValue
-          : item.totalValue;
-      final valueInUSD = _currencyService.convertBetween(
-        value,
-        item.currency,
-        'USD',
-      );
-      return sum + valueInUSD;
+      return sum + _currencyService.convertBetween(item.netValue, item.currency, 'USD');
     });
   }
 
   double get totalPortfolioCost {
     return _portfolioItems.where((item) => item.dateSold == null).fold(0, (sum, item) {
-      final cost = item.type == AppConstants.typeRealEstate && item.mortgagePrincipal != null
-          ? (item.purchasePrice - item.mortgagePrincipal!).clamp(0.0, double.infinity)
-          : item.totalCost;
-      final costInUSD = _currencyService.convertBetween(cost, item.currency, 'USD');
-      return sum + costInUSD;
+      return sum + _currencyService.convertBetween(item.netCost, item.currency, 'USD');
     });
   }
 
@@ -67,18 +55,19 @@ class PortfolioService extends ChangeNotifier {
     final Map<String, double> result = {};
     for (final item in _portfolioItems.where((i) => i.dateSold == null)) {
       final valueInUSD = _currencyService.convertBetween(item.totalValue, item.currency, 'USD');
-      result[item.type] = (result[item.type] ?? 0) + valueInUSD;
+      result[item.summaryType] = (result[item.summaryType] ?? 0) + valueInUSD;
     }
     return result;
   }
 
+  /// Outstanding debt (mortgages, SBLOCs) keyed by the asset type it reduces.
   Map<String, double> get mortgageRemainingByType {
     final Map<String, double> result = {};
     for (final item in _portfolioItems.where((i) => i.dateSold == null)) {
       final remaining = item.mortgageRemaining;
       if (remaining != null && remaining > 0) {
         final inUSD = _currencyService.convertBetween(remaining, item.currency, 'USD');
-        result[item.type] = (result[item.type] ?? 0) + inUSD;
+        result[item.summaryType] = (result[item.summaryType] ?? 0) + inUSD;
       }
     }
     return result;
@@ -89,15 +78,8 @@ class PortfolioService extends ChangeNotifier {
   Map<String, double> get portfolioByType {
     final Map<String, double> result = {};
     for (final item in _portfolioItems.where((i) => i.dateSold == null)) {
-      final value = item.type == AppConstants.typeRealEstate
-          ? item.netEquityValue
-          : item.totalValue;
-      final valueInUSD = _currencyService.convertBetween(
-        value,
-        item.currency,
-        'USD',
-      );
-      result[item.type] = (result[item.type] ?? 0) + valueInUSD;
+      final valueInUSD = _currencyService.convertBetween(item.netValue, item.currency, 'USD');
+      result[item.summaryType] = (result[item.summaryType] ?? 0) + valueInUSD;
     }
     return result;
   }

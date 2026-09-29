@@ -571,8 +571,9 @@ class PortfolioTab extends StatelessWidget {
     CurrencyService currencyService,
     BuildContext context,
   ) {
+    // Liabilities are excluded: the chart stacks gross asset values
     final activeItems = portfolioService.portfolioItems
-        .where((item) => item.dateSold == null)
+        .where((item) => item.dateSold == null && !item.isSbloc)
         .toList();
 
     activeItems.sort((a, b) => a.purchaseDate.compareTo(b.purchaseDate));
@@ -590,7 +591,7 @@ class PortfolioTab extends StatelessWidget {
     Map<String, double> portfolioByType,
     double total,
   ) {
-    final entries = portfolioByType.entries.toList();
+    final entries = portfolioByType.entries.where((e) => e.value > 0).toList();
     return entries.map((entry) {
       final percentage = total > 0 ? (entry.value / total) * 100 : 0;
       return PieChartSectionData(
@@ -708,7 +709,7 @@ class PortfolioTab extends StatelessWidget {
     // Group items by type and calculate totals
     final itemsByType = <String, List<PortfolioItem>>{};
     for (final item in portfolioService.portfolioItems) {
-      itemsByType.putIfAbsent(item.type, () => []).add(item);
+      itemsByType.putIfAbsent(item.summaryType, () => []).add(item);
     }
 
     // Calculate totals for each type (exclude sold items)
@@ -719,21 +720,11 @@ class PortfolioTab extends StatelessWidget {
       final activeItems = items.where((item) => item.dateSold == null);
       final totalValue = activeItems.fold<double>(
         0,
-        (sum, item) {
-          final value = item.type == 'Real Estate'
-              ? item.netEquityValue
-              : item.totalValue;
-          return sum + currencyService.convertBetween(value, item.currency, 'USD');
-        },
+        (sum, item) => sum + currencyService.convertBetween(item.netValue, item.currency, 'USD'),
       );
       final totalCost = activeItems.fold<double>(
         0,
-        (sum, item) {
-          final cost = item.type == 'Real Estate' && item.mortgagePrincipal != null
-              ? (item.purchasePrice - item.mortgagePrincipal!).clamp(0.0, double.infinity)
-              : item.totalCost;
-          return sum + currencyService.convertBetween(cost, item.currency, 'USD');
-        },
+        (sum, item) => sum + currencyService.convertBetween(item.netCost, item.currency, 'USD'),
       );
 
       final totalMortgageRemaining = activeItems.fold<double>(
@@ -821,6 +812,9 @@ class _ExpandableTypeCard extends StatefulWidget {
 class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
   bool _isExpanded = false;
 
+  int get _assetCount =>
+      widget.items.where((e) => !e.isSbloc).map((e) => e.name).toSet().length;
+
   @override
   Widget build(BuildContext context) {
     final totalGainLoss = widget.totalValue - widget.totalCost;
@@ -876,30 +870,38 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${widget.items.map((e) => e.name).toSet().length} ${widget.items.map((e) => e.name).toSet().length == 1 ? 'item' : 'items'}',
+                          '$_assetCount ${_assetCount == 1 ? 'item' : 'items'}',
                           style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                         ),
                       ],
                     ),
                   ),
-                  Flexible(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(
-                          widget.currencyFormatter.format(widget.totalDisplayValue),
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.end,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            widget.currencyFormatter.format(widget.totalDisplayValue),
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                          ),
                         ),
                         if (widget.totalMortgageRemaining > 0)
-                          Text(
-                            '−${widget.currencyFormatter.format(widget.totalMortgageRemaining)}',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.red,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              '−${widget.currencyFormatter.format(widget.totalMortgageRemaining)}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.red,
+                              ),
+                              maxLines: 1,
                             ),
-                            textAlign: TextAlign.end,
                           ),
                         const SizedBox(height: 4),
                         Container(
@@ -911,12 +913,16 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
                             color: gainLossColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text(
-                            '${totalGainLoss >= 0 ? '+' : ''}${widget.currencyFormatter.format(totalGainLoss)}',
-                            style: TextStyle(
-                              color: gainLossColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '${totalGainLoss >= 0 ? '+' : ''}${widget.currencyFormatter.format(totalGainLoss)}',
+                              style: TextStyle(
+                                color: gainLossColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
                             ),
                           ),
                         ),
@@ -958,7 +964,8 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
     // Group active items by name to aggregate duplicates
     final grouped = <String, List<PortfolioItem>>{};
     for (final item in widget.items.where((i) => i.dateSold == null)) {
-      grouped.putIfAbsent(item.name, () => []).add(item);
+      // Keep loans separate from same-named assets
+      grouped.putIfAbsent(item.isSbloc ? 'sbloc:${item.name}' : item.name, () => []).add(item);
     }
 
     final rows = grouped.entries.map((entry) {
@@ -970,13 +977,9 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
       double totalMortgageUSD = 0;
 
       for (final item in items) {
-        final value = item.type == 'Real Estate' ? item.netEquityValue : item.totalValue;
-        final cost = item.type == 'Real Estate' && item.mortgagePrincipal != null
-            ? (item.purchasePrice - item.mortgagePrincipal!).clamp(0.0, double.infinity)
-            : item.totalCost;
-        totalValueUSD += widget.currencyService.convertBetween(value, item.currency, 'USD');
+        totalValueUSD += widget.currencyService.convertBetween(item.netValue, item.currency, 'USD');
         totalDisplayUSD += widget.currencyService.convertBetween(item.totalValue, item.currency, 'USD');
-        totalCostUSD += widget.currencyService.convertBetween(cost, item.currency, 'USD');
+        totalCostUSD += widget.currencyService.convertBetween(item.netCost, item.currency, 'USD');
         totalQty += item.quantity;
         final remaining = item.mortgageRemaining;
         if (remaining != null) {
@@ -985,7 +988,9 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
       }
 
       return (
-        name: entry.key,
+        name: items.first.name,
+        isLoan: items.first.isSbloc,
+        interestRate: items.first.interestRate,
         qty: totalQty,
         valueUSD: totalValueUSD,
         displayUSD: totalDisplayUSD,
@@ -1019,7 +1024,9 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Qty: ${row.qty % 1 == 0 ? row.qty.toInt() : row.qty}',
+                    row.isLoan
+                        ? 'SBLOC${row.interestRate != null ? ' · ${row.interestRate!.toStringAsFixed(2)}%' : ''}'
+                        : 'Qty: ${row.qty % 1 == 0 ? row.qty.toInt() : row.qty}',
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ],
@@ -1028,7 +1035,16 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                row.mortgageUSD > 0
+                row.isLoan
+                    ? Text(
+                        '−${widget.currencyFormatter.format(row.mortgageUSD)}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red,
+                        ),
+                      )
+                    : row.mortgageUSD > 0
                     ? Text.rich(
                         TextSpan(
                           children: [
@@ -1051,6 +1067,7 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
                         widget.currencyFormatter.format(row.displayUSD),
                         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                       ),
+                if (!row.isLoan) ...[
                 const SizedBox(height: 2),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -1070,6 +1087,7 @@ class _ExpandableTypeCardState extends State<_ExpandableTypeCard> {
                     ),
                   ),
                 ),
+                ],
               ],
             ),
           ],

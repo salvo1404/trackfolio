@@ -148,11 +148,8 @@ class _ShareTrackerTabState extends State<ShareTrackerTab> {
       final totalValue = items.where((item) => item.dateSold == null).fold<double>(
         0,
         (sum, item) {
-          final value = item.type == 'Real Estate'
-              ? item.netEquityValue
-              : item.totalValue;
           final valueInUSD = currencyService.convertBetween(
-            value,
+            item.netValue,
             item.currency,
             'USD',
           );
@@ -355,6 +352,30 @@ class _ShareTrackerTabState extends State<ShareTrackerTab> {
                                 ),
                               ],
                             ),
+                          ] else if (item.isSbloc) ...[
+                            Row(
+                              children: [
+                                _detailChip('Start', DateFormat('MMM dd, yyyy').format(item.purchaseDate)),
+                                const SizedBox(width: 12),
+                                _detailChip('Amount', fmt(item.mortgagePrincipal ?? item.purchasePrice)),
+                                const SizedBox(width: 12),
+                                _detailChip('Rate', '${(item.interestRate ?? 0).toStringAsFixed(2)}%'),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                _detailChip('Term', '${item.mortgageLengthYears ?? '-'} yrs'),
+                                const SizedBox(width: 12),
+                                _detailChip('Monthly', fmt(item.monthlyRepayment ?? 0)),
+                                const SizedBox(width: 12),
+                                _detailChipColored(
+                                  'Balance Left',
+                                  '−${fmt(item.mortgageRemaining ?? 0)}',
+                                  AppTheme.errorColor,
+                                ),
+                              ],
+                            ),
                           ] else ...[
                             // Simplified layout for other types
                             Row(
@@ -475,6 +496,8 @@ class _ShareTrackerTabState extends State<ShareTrackerTab> {
         return Icons.attach_money;
       case 'retirement fund':
         return Icons.savings_outlined;
+      case 'sbloc':
+        return Icons.credit_score_outlined;
       default:
         return Icons.account_balance_wallet;
     }
@@ -553,6 +576,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
   late TextEditingController _mortgagePrincipalController;
   late TextEditingController _mortgageLengthYearsController;
   late TextEditingController _monthlyRepaymentController;
+  late TextEditingController _interestRateController;
   late DateTime _purchaseDate;
   DateTime? _dateSold;
   double? _suggestedPrice;
@@ -596,6 +620,9 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
     _monthlyRepaymentController = TextEditingController(
       text: widget.item?.monthlyRepayment?.toString() ?? '',
     );
+    _interestRateController = TextEditingController(
+      text: widget.item?.interestRate?.toString() ?? '',
+    );
     _purchaseDate = widget.item?.purchaseDate ?? DateTime.now();
     _dateSold = widget.item?.dateSold;
   }
@@ -611,6 +638,7 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
     _mortgagePrincipalController.dispose();
     _mortgageLengthYearsController.dispose();
     _monthlyRepaymentController.dispose();
+    _interestRateController.dispose();
     super.dispose();
   }
 
@@ -741,6 +769,11 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
 
     final portfolioService = context.read<PortfolioService>();
 
+    if (_type == AppConstants.typeSBLOC) {
+      _saveSbloc(portfolioService);
+      return;
+    }
+
     // For simplified assets, quantity is always 1 (since we don't ask for it)
     final quantity = _isSimplifiedAssetType()
         ? 1.0
@@ -773,6 +806,42 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
       monthlyRepayment: hasMortgage
           ? double.tryParse(_monthlyRepaymentController.text)
           : null,
+    );
+
+    final isNew = widget.item == null;
+    if (isNew) {
+      portfolioService.addPortfolioItem(item);
+    } else {
+      portfolioService.updatePortfolioItem(item);
+    }
+
+    Navigator.of(context).pop({
+      'name': item.name,
+      'isNew': isNew,
+    });
+  }
+
+  double get _sblocAmount => double.tryParse(_purchasePriceController.text) ?? 0;
+  double get _sblocRate => double.tryParse(_interestRateController.text) ?? 0;
+  int get _sblocYears => int.tryParse(_mortgageLengthYearsController.text) ?? 0;
+
+  void _saveSbloc(PortfolioService portfolioService) {
+    final amount = _sblocAmount;
+    final item = PortfolioItem(
+      id: widget.item?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      type: AppConstants.typeSBLOC,
+      name: _nameController.text,
+      quantity: 1,
+      purchasePrice: amount,
+      currentValue: 0,
+      purchaseDate: _purchaseDate,
+      lastUpdated: DateTime.now(),
+      currency: _currency,
+      fees: 0,
+      mortgagePrincipal: amount,
+      mortgageLengthYears: _sblocYears,
+      monthlyRepayment: PortfolioItem.amortizedMonthlyPayment(amount, _sblocRate, _sblocYears),
+      interestRate: _sblocRate,
     );
 
     final isNew = widget.item == null;
@@ -1725,6 +1794,251 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
     ];
   }
 
+  InputDecoration _fieldDecoration(BuildContext context, String hint, IconData icon, {String? suffix}) {
+    return InputDecoration(
+      hintText: hint,
+      suffixText: suffix,
+      prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.primary),
+      filled: true,
+      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+      ),
+    );
+  }
+
+  Widget _labeledField(String label, Widget field) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[700],
+          ),
+        ),
+        const SizedBox(height: 8),
+        field,
+      ],
+    );
+  }
+
+  String? _positiveNumber(String? v) {
+    final n = double.tryParse(v ?? '');
+    return n == null || n <= 0 ? 'Enter a positive number' : null;
+  }
+
+  List<Widget> _buildSblocFields(BuildContext context) {
+    return [
+      Text(
+        'Borrowed against your Stocks & ETFs. The outstanding balance is subtracted from your portfolio value.',
+        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+      ),
+      const SizedBox(height: 16),
+      _labeledField(
+        'Name',
+        TextFormField(
+          controller: _nameController,
+          decoration: _fieldDecoration(context, 'e.g., Brokerage Credit Line', Icons.label_outline),
+          validator: (v) => v?.isEmpty == true ? 'Required' : null,
+        ),
+      ),
+      const SizedBox(height: 20),
+      _labeledField(
+        'Loan Amount',
+        TextFormField(
+          controller: _purchasePriceController,
+          decoration: _fieldDecoration(context, 'Amount borrowed', Icons.account_balance_outlined),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          onChanged: (_) => setState(() {}),
+          validator: _positiveNumber,
+        ),
+      ),
+      const SizedBox(height: 20),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: _labeledField(
+              'Interest Rate',
+              TextFormField(
+                controller: _interestRateController,
+                decoration: _fieldDecoration(context, 'e.g. 6.5', Icons.percent, suffix: '%'),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                onChanged: (_) => setState(() {}),
+                validator: (v) {
+                  final n = double.tryParse(v ?? '');
+                  return n == null || n < 0 ? 'Required' : null;
+                },
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _labeledField(
+              'Repayment (years)',
+              TextFormField(
+                controller: _mortgageLengthYearsController,
+                decoration: _fieldDecoration(context, 'e.g. 5', Icons.calendar_month_outlined),
+                keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {}),
+                validator: (v) {
+                  final n = int.tryParse(v ?? '');
+                  return n == null || n <= 0 ? 'Required' : null;
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+      _labeledField(
+        'Start Date',
+        InkWell(
+          onTap: () async {
+            final date = await showDatePicker(
+              context: context,
+              initialDate: _purchaseDate,
+              firstDate: DateTime(2000),
+              lastDate: DateTime.now(),
+            );
+            if (date != null) {
+              setState(() => _purchaseDate = date);
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              border: Border.all(color: Theme.of(context).colorScheme.outline),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.calendar_today, color: Theme.of(context).colorScheme.primary, size: 20),
+                const SizedBox(width: 12),
+                Text(
+                  DateFormat('MMM dd, yyyy').format(_purchaseDate),
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      if (_sblocAmount > 0 && _sblocYears > 0) ...[
+        const SizedBox(height: 20),
+        _buildSblocSimulation(context),
+      ],
+    ];
+  }
+
+  Widget _buildSblocSimulation(BuildContext context) {
+    final cs = context.read<CurrencyService>();
+    final sym = cs.getSymbol(_currency);
+    String fmt(double v) => NumberFormat.currency(symbol: sym, decimalDigits: 2).format(v);
+
+    final amount = _sblocAmount;
+    final rate = _sblocRate;
+    final years = _sblocYears;
+    final monthly = PortfolioItem.amortizedMonthlyPayment(amount, rate, years);
+    final totalRepaid = monthly * years * 12;
+    final totalInterest = totalRepaid - amount;
+    final now = DateTime.now();
+    final monthsPassed = ((now.year - _purchaseDate.year) * 12 + (now.month - _purchaseDate.month))
+        .clamp(0, years * 12);
+    final remaining = PortfolioItem.loanBalanceAfter(amount, monthly, rate, monthsPassed);
+    final payoff = DateTime(_purchaseDate.year + years, _purchaseDate.month, _purchaseDate.day);
+
+    Widget line(String label, String value, {Color? color, bool bold = false}) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(label, style: TextStyle(fontSize: 13, color: Colors.orange[900])),
+            ),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+                color: color ?? Colors.orange[900],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.orange[50],
+        border: Border.all(color: Colors.orange[200]!),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.calculate_outlined, color: Colors.orange[700], size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Repayment Simulation',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.orange[900],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          line('Monthly repayment', fmt(monthly), bold: true),
+          line('Total interest', fmt(totalInterest)),
+          line('Total to repay', fmt(totalRepaid)),
+          line('Paid off by', DateFormat('MMM yyyy').format(payoff)),
+          Divider(color: Colors.orange[200]),
+          line('Remaining today', fmt(remaining), color: Colors.red[700], bold: true),
+          const SizedBox(height: 8),
+          Text(
+            'Balance at end of year',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.orange[800]),
+          ),
+          const SizedBox(height: 4),
+          for (int y = 1; y <= years; y++)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 1),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Year $y',
+                      style: TextStyle(fontSize: 12, color: Colors.orange[800]),
+                    ),
+                  ),
+                  Text(
+                    fmt(PortfolioItem.loanBalanceAfter(amount, monthly, rate, y * 12)),
+                    style: TextStyle(fontSize: 12, color: Colors.orange[900]),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   List<Widget> _buildGenericFields(BuildContext context) {
     // For Crypto - needs quantity
     return [
@@ -2040,10 +2354,14 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
                             ),
                           ),
                         ),
-                        items: AppConstants.portfolioTypes
+                        isExpanded: true,
+                        items: AppConstants.addableTypes
                             .map((type) => DropdownMenuItem(
                                   value: type,
-                                  child: Text(type),
+                                  child: Text(
+                                    type,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ))
                             .toList(),
                         onChanged: (value) {
@@ -2107,7 +2425,9 @@ class _PortfolioItemDialogState extends State<PortfolioItemDialog> {
                   const SizedBox(height: 20),
 
                   // Dynamic fields based on asset type
-                  if (_type == AppConstants.typeStocksAndETFs || _type == AppConstants.typeCrypto)
+                  if (_type == AppConstants.typeSBLOC)
+                    ..._buildSblocFields(context)
+                  else if (_type == AppConstants.typeStocksAndETFs || _type == AppConstants.typeCrypto)
                     ..._buildSharesFields(context)
                   else if (_isSimplifiedAssetType())
                     ..._buildSimplifiedFields(context)

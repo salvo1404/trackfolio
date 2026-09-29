@@ -18,6 +18,7 @@ class AppConstants {
   static const String typeWatches = 'Watches';
   static const String typeCash = 'Cash';
   static const String typeRetirementFund = 'Retirement Fund';
+  static const String typeSBLOC = 'SBLOC';
 
   static const List<String> portfolioTypes = [
     typeStocksAndETFs,
@@ -26,6 +27,12 @@ class AppConstants {
     typeWatches,
     typeCash,
     typeRetirementFund,
+  ];
+
+  // Types selectable in the add-asset dialog (liabilities aren't goal targets)
+  static const List<String> addableTypes = [
+    ...portfolioTypes,
+    typeSBLOC,
   ];
 
   // Budget Categories

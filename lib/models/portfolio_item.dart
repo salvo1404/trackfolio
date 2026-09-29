@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:math' as math;
+import '../utils/constants.dart';
 
 class PortfolioItem {
   final String id;
@@ -16,6 +18,7 @@ class PortfolioItem {
   final double? mortgagePrincipal; // Original mortgage amount
   final int? mortgageLengthYears; // Mortgage term in years
   final double? monthlyRepayment; // Monthly mortgage payment
+  final double? interestRate; // Annual loan interest rate in % (SBLOC)
 
   PortfolioItem({
     required this.id,
@@ -33,6 +36,7 @@ class PortfolioItem {
     this.mortgagePrincipal,
     this.mortgageLengthYears,
     this.monthlyRepayment,
+    this.interestRate,
   });
 
   double get totalValue => quantity * currentValue;
@@ -40,13 +44,45 @@ class PortfolioItem {
   double get gainLoss => totalValue - totalCost;
   double get gainLossPercent => totalCost > 0 ? (gainLoss / totalCost) * 100 : 0;
 
+  bool get isSbloc => type == AppConstants.typeSBLOC;
+
+  /// Asset category this item rolls up into in summaries (SBLOC counts against Stocks & ETFs).
+  String get summaryType => isSbloc ? AppConstants.typeStocksAndETFs : type;
+
+  /// Monthly payment for a fully amortizing loan.
+  static double amortizedMonthlyPayment(double principal, double annualRatePercent, int years) {
+    final months = years * 12;
+    if (principal <= 0 || months <= 0) return 0;
+    final r = annualRatePercent / 100 / 12;
+    if (r <= 0) return principal / months;
+    final g = math.pow(1 + r, months).toDouble();
+    return principal * r * g / (g - 1);
+  }
+
+  /// Outstanding balance after [months] payments.
+  static double loanBalanceAfter(double principal, double monthly, double annualRatePercent, int months) {
+    final r = annualRatePercent / 100 / 12;
+    final double remaining;
+    if (r > 0) {
+      final g = math.pow(1 + r, months).toDouble();
+      remaining = principal * g - monthly * (g - 1) / r;
+    } else {
+      remaining = principal - monthly * months;
+    }
+    return remaining < 0 ? 0 : remaining;
+  }
+
   double? get mortgageRemaining {
     if (mortgagePrincipal == null || monthlyRepayment == null) return null;
     final now = DateTime.now();
     final monthsPassed =
         (now.year - purchaseDate.year) * 12 + (now.month - purchaseDate.month);
-    final remaining = mortgagePrincipal! - (monthlyRepayment! * monthsPassed);
-    return remaining < 0 ? 0 : remaining;
+    return loanBalanceAfter(
+      mortgagePrincipal!,
+      monthlyRepayment!,
+      interestRate ?? 0,
+      monthsPassed < 0 ? 0 : monthsPassed,
+    );
   }
 
   double get netEquityValue {
@@ -54,6 +90,23 @@ class PortfolioItem {
     if (remaining == null) return totalValue;
     final equity = totalValue - remaining;
     return equity < 0 ? 0 : equity;
+  }
+
+  /// Value counted in portfolio totals: net equity for real estate, negative balance for SBLOC.
+  double get netValue {
+    if (isSbloc) return -(mortgageRemaining ?? 0);
+    if (type == AppConstants.typeRealEstate) return netEquityValue;
+    return totalValue;
+  }
+
+  /// Cost counted in portfolio totals: own equity for real estate, negative principal for SBLOC.
+  double get netCost {
+    if (isSbloc) return -(mortgagePrincipal ?? purchasePrice);
+    if (type == AppConstants.typeRealEstate && mortgagePrincipal != null) {
+      final cost = purchasePrice - mortgagePrincipal!;
+      return cost < 0 ? 0 : cost;
+    }
+    return totalCost;
   }
 
   Map<String, dynamic> toJson() {
@@ -73,6 +126,7 @@ class PortfolioItem {
       'mortgagePrincipal': mortgagePrincipal,
       'mortgageLengthYears': mortgageLengthYears,
       'monthlyRepayment': monthlyRepayment,
+      'interestRate': interestRate,
     };
   }
 
@@ -93,6 +147,7 @@ class PortfolioItem {
       mortgagePrincipal: (json['mortgagePrincipal'] as num?)?.toDouble(),
       mortgageLengthYears: (json['mortgageLengthYears'] as num?)?.toInt(),
       monthlyRepayment: (json['monthlyRepayment'] as num?)?.toDouble(),
+      interestRate: (json['interestRate'] as num?)?.toDouble(),
     );
   }
 
@@ -118,6 +173,7 @@ class PortfolioItem {
     double? mortgagePrincipal,
     int? mortgageLengthYears,
     double? monthlyRepayment,
+    double? interestRate,
   }) {
     return PortfolioItem(
       id: id ?? this.id,
@@ -135,6 +191,7 @@ class PortfolioItem {
       mortgagePrincipal: mortgagePrincipal ?? this.mortgagePrincipal,
       mortgageLengthYears: mortgageLengthYears ?? this.mortgageLengthYears,
       monthlyRepayment: monthlyRepayment ?? this.monthlyRepayment,
+      interestRate: interestRate ?? this.interestRate,
     );
   }
 }

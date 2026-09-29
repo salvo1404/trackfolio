@@ -220,7 +220,7 @@ class DashboardPage extends StatelessWidget {
     Map<String, double> portfolioByType,
     double total,
   ) {
-    final entries = portfolioByType.entries.toList();
+    final entries = portfolioByType.entries.where((e) => e.value > 0).toList();
     return entries.map((entry) {
       final percentage = total > 0 ? (entry.value / total) * 100 : 0;
       return PieChartSectionData(

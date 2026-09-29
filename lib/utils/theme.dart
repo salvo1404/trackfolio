@@ -130,6 +130,8 @@ class AppTheme {
         return const Color(0xFF43A047);
       case AppConstants.typeRetirementFund:
         return const Color(0xFF00897B);
+      case AppConstants.typeSBLOC:
+        return const Color(0xFFE53935);
       default:
         return primaryColor;
     }
